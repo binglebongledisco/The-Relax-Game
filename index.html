@@ -38,6 +38,8 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 #rm::placeholder,#un::placeholder{color:#fffa;font-weight:600}
 #mp{color:#fff;font:600 clamp(10px,1.7vh,13px) Georgia,serif;text-shadow:0 1px 4px #000;background:#0007;padding:clamp(6px,1vh,10px) clamp(10px,1.5vh,14px);border-radius:12px;width:fit-content;max-width:min(82vw,440px);line-height:1.4;margin:0}
 #play{width:fit-content;padding:clamp(10px,1.9vh,18px) clamp(30px,6vh,60px);border-radius:40px;background:linear-gradient(#ffd23d,#ff7a1a);color:#3a1160;font-size:clamp(16px,3.4vh,24px);font-weight:900;border:3px solid #fff;box-shadow:0 .8vh 0 #8a2a00;animation:pl 1.2s ease-in-out infinite;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#opt-btn{width:fit-content;padding:clamp(8px,1.5vh,14px) clamp(20px,4vh,40px);border-radius:30px;background:#0007;color:#fff;font-size:clamp(13px,2.5vh,17px);font-weight:700;border:2px solid #fff6;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .2s,border-color .2s;}
+#opt-btn.active{background:#3df5a8cc;color:#0a3f55;border-color:#fff;box-shadow:0 0 12px #3df5a888;}
 @keyframes pl{50%{transform:scale(1.06)}}
 #rot{display:none;position:fixed;inset:0;background:#123;color:#fff;align-items:center;justify-content:center;font-size:clamp(16px,2.5vmin,22px);z-index:9;text-align:center;padding:20px}
 @media (orientation:portrait){#rot{display:flex}}
@@ -55,7 +57,7 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 <input id="un" placeholder="Your name (optional)" maxlength="16" autocomplete="off">
 <input id="rm" placeholder="Room name (blank = solo)" maxlength="30" autocomplete="off">
 <div id="mp">Multiplayer: type a room name, then open this same page on another device or browser tab and enter the same name to play together.</div>
-<div id="play">PLAY</div></div>
+<div id="play">PLAY</div><div id="opt-btn">Optimize: OFF</div></div>
 <div id="st"></div>
 <div id="eb"><i data-e="chat">💬</i><i data-e="mic">🎤</i><i data-e="2">💃</i><i data-e="3">👋</i><i data-e="4">🪑</i><i data-e="5">🙆</i><i data-e="6">🎉</i></div>
 <div id="cl"></div><div id="cb"><input id="ci" maxlength="120" placeholder="Say something..." autocomplete="off"><b id="cs">Send</b></div>
@@ -611,6 +613,14 @@ async function toggleMic(){
   }catch(e){mic=null;hud('mic blocked by this viewer')}
 }
 // ---------- home -> play ----------
+let optimizeMode = false;
+$('opt-btn').onclick=()=>{
+  optimizeMode = !optimizeMode;
+  const b = $('opt-btn');
+  b.textContent = optimizeMode ? 'Optimize: ON' : 'Optimize: OFF';
+  b.className = optimizeMode ? 'active' : '';
+};
+
 $('play').onclick=()=>{
   const n=$('rm').value.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g,'-').replace(/^[^a-z0-9]+/,'').slice(0,40);
   uname=$('un').value.trim().slice(0,16);
@@ -779,7 +789,7 @@ const uw=cam.position.y<0;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6)
 if(!uw)fogC.copy(FOG0);
 skyM.position.copy(cam.position);water.position.set(P.x,0,P.z);
 sun.target.position.set(Math.round(P.x/2)*2,0,Math.round(P.z/2)*2);sun.position.copy(sun.target.position).addScaledVector(SUN,90);
-if(!uw&&fr%2===0){scene.scale.y=-1;water.visible=false;rd.clippingPlanes=[clipP];rd.shadowMap.autoUpdate=false;for(const c of pool)c.gr.visible=false;
+if(!optimizeMode && !uw && fr%2===0){scene.scale.y=-1;water.visible=false;rd.clippingPlanes=[clipP];rd.shadowMap.autoUpdate=false;for(const c of pool)c.gr.visible=false;
 rd.setRenderTarget(rtR);rd.render(scene,cam);rd.setRenderTarget(null);scene.scale.y=1;water.visible=true;rd.clippingPlanes=[];rd.shadowMap.autoUpdate=true}
 chunks(false);
 
