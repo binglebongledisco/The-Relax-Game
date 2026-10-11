@@ -36,6 +36,8 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 #rm::placeholder,#un::placeholder{color:#fffa;font-weight:600}
 #mp{color:#fff;font:600 clamp(10px,1.7vh,13px) Georgia,serif;text-shadow:0 1px 4px #000;background:#0007;padding:clamp(6px,1vh,10px) clamp(10px,1.5vh,14px);border-radius:12px;width:fit-content;max-width:min(82vw,440px);line-height:1.4;margin:0}
 #play{width:fit-content;padding:clamp(10px,1.9vh,18px) clamp(30px,6vh,60px);border-radius:40px;background:linear-gradient(#ffd23d,#ff7a1a);color:#3a1160;font-size:clamp(16px,3.4vh,24px);font-weight:900;border:3px solid #fff;box-shadow:0 .8vh 0 #8a2a00;animation:pl 1.2s ease-in-out infinite;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#dn-btn{width:fit-content;padding:clamp(8px,1.5vh,14px) clamp(20px,4vh,40px);border-radius:30px;background:#0007;color:#fff;font-size:clamp(13px,2.5vh,17px);font-weight:700;border:2px solid #fff6;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .2s,border-color .2s;margin-top:4px;}
+#dn-btn.night{background:#112244cc;color:#8ab4f8;border-color:#8ab4f8;box-shadow:0 0 12px #4285f466;}
 @keyframes pl{50%{transform:scale(1.06)}}
 #rot{display:none;position:fixed;inset:0;background:#123;color:#fff;align-items:center;justify-content:center;font-size:clamp(16px,2.5vmin,22px);z-index:9;text-align:center;padding:20px}
 @media (orientation:portrait){#rot{display:flex}}
@@ -53,7 +55,7 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 <input id="un" placeholder="Your name (optional)" maxlength="16" autocomplete="off">
 <input id="rm" placeholder="Room name (blank = solo)" maxlength="30" autocomplete="off">
 <div id="mp">Multiplayer: type a room name, then open this same page on another device or browser tab and enter the same name to play together.</div>
-<div id="play">PLAY</div></div>
+<div id="play">PLAY</div><div id="dn-btn">Time: Day</div></div>
 <div id="st"></div>
 <div id="eb"><i data-e="chat">💬</i><i data-e="mic">🎤</i><i data-e="2">💃</i><i data-e="3">👋</i><i data-e="4">🪑</i><i data-e="5">🙆</i><i data-e="6">🎉</i></div>
 <div id="cl"></div><div id="cb"><input id="ci" maxlength="120" placeholder="Say something..." autocomplete="off"><b id="cs">Send</b></div>
@@ -96,9 +98,21 @@ scene.add(new T.HemisphereLight(0xbfd8ff,0x7a4a6a,.85));
 const sun=new T.DirectionalLight(0xfff0d8,1.1);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
 const sc=sun.shadow.camera;sc.left=sc.bottom=-36;sc.right=sc.top=36;sc.near=1;sc.far=170;sun.shadow.bias=-.0006;
 scene.add(sun,sun.target);
+if(nightMode){
+  scene.fog.color.setHex(0x0a0f1d);
+  sun.color.setHex(0xd0d8e8);
+  sun.intensity = 0.5;
+}
 const skyM=new T.Mesh(new T.SphereGeometry(300,16,12),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,fog:false,uniforms:{uT:U.uT,uSun:{value:SUN}},
 vertexShader:'varying vec3 vD;void main(){vD=position;gl_Position=(projectionMatrix*modelViewMatrix*vec4(position,1.)).xyww;}',
-fragmentShader:'varying vec3 vD;uniform vec3 uSun;uniform float uT;'+NZ+SKY2+'void main(){gl_FragColor=vec4(sky(normalize(vD),uSun,uT),1.);}'}));
+fragmentShader:'varying vec3 vD;uniform vec3 uSun;uniform float uT;'+NZ+SKY2+'void main(){'+
+'vec3 col=sky(normalize(vD),uSun,uT);' +
+'if(' + str(str('nightMode')).lower() + ') {' +
+'  col=vec3(0.02,0.03,0.07);' +
+'  float s=fract(sin(dot(normalize(vD).xz*150.,vec2(12.9898,78.233)))*43758.5453);' +
+'  if(s>0.975){ float colS=fract(s*10.); vec3 stC=colS<0.3?vec3(1,0.8,0.8):colS<0.6?vec3(0.8,0.9,1):vec3(1,1,0.7); col+=stC*(s-0.975)*40.; }' +
+'}'+
+'gl_FragColor=vec4(col,1.);}'}));
 skyM.frustumCulled=false;skyM.renderOrder=1;scene.add(skyM);
 const wU={uRef:{value:rtR.texture},uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.011}};
 const water=new T.Mesh(new T.PlaneGeometry(700,700).rotateX(-Math.PI/2),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,uniforms:wU,
@@ -609,7 +623,15 @@ async function toggleMic(){
   }catch(e){mic=null;hud('mic blocked by this viewer')}
 }
 // ---------- home -> play ----------
-$('play').onclick=()=>{
+let nightMode = false;
+$('dn-btn').onclick=()=>{
+  nightMode = !nightMode;
+  const b = $('dn-btn');
+  b.textContent = nightMode ? 'Time: Night' : 'Time: Day';
+  b.className = nightMode ? 'night' : '';
+};
+
+$('play').onclick=()=> {
   const n=$('rm').value.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g,'-').replace(/^[^a-z0-9]+/,'').slice(0,40);
   uname=$('un').value.trim().slice(0,16);
   try{localStorage.setItem('rlx-name',uname)}catch(e){}
