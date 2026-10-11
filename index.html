@@ -713,8 +713,7 @@ addEventListener('keydown',e=>{
   if(e.code==='Enter'&&inGame){ $('cb').style.display='flex'; $('ci').focus(); e.preventDefault(); return; }
   if(e.code==='KeyV')tp=!tp;
   if(/^Digit[1-7]$/.test(e.code)){ emote=[2,3,4,5,6,11,12][+e.code[5]-1]; syncBar(); }
-  if(e.code==='KeyC'&&inGame)fire();
-  if(e.code==='KeyF' && rm){
+    if(e.code==='KeyF' && rm){
     // quick toggle drag
     if(dragging) stopDrag(); else grab();
   }
