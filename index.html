@@ -298,7 +298,19 @@ function hud(m){
   if(m)s+=' · '+m;
   $('st').textContent=s;
 }
-function tdone(r){const u=r.u;if(!u.o)return;const d=Math.hypot(r.position.x-u.o.x,r.position.z-u.o.z);u.o=null;best=Math.max(best,d);hud('throw '+d.toFixed(1)+'m')}
+function tdone(r){
+  const u=r.u;if(!u.o)return;
+  const d=Math.hypot(r.position.x-u.o.x,r.position.z-u.o.z);
+  u.o=null;best=Math.max(best,d);hud('throw '+d.toFixed(1)+'m');
+  if(u.kind===8 && (u.thrownBy==='me'||(rm && u.thrownBy===rm.id))){
+    P.x=r.position.x;
+    P.z=r.position.z;
+    P.y=Math.max(H(P.x,P.z),r.position.y);
+    cam.position.copy(P);
+    cam.position.y+=1.0;
+    addMsg('·','Teleported by Rainbow Sphere!',.5);
+  }
+}
 // ---------- name tags ----------
 function mkTag(){
   const c=document.createElement('canvas'); c.width=320; c.height=72;
