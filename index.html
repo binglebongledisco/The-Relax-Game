@@ -718,7 +718,7 @@ const sy=Math.sin(ya),cy=Math.cos(ya),g=H(P.x,P.z),swim=g<-1,k=Math.min(1,dt*(sw
 
 if(myKo>0){
   // ---- RAGDOLL: no input, gravity only ----
-  P.v.y-=15*dt; P.y+=P.v.y*dt;
+  P.v.y-=18*dt; P.y+=P.v.y*dt;
   const gg=H(P.x,P.z);
   if(P.y<=gg){ P.y=gg; P.v.y=0; }
   P.v.x*=1-3*dt; P.v.z*=1-3*dt;
@@ -748,17 +748,17 @@ if(myKo>0){
   if(fr%30===0) hud();
 } else {
   if(swim){const cp=Math.cos(pt),tx=(-sy*cp*iy+cy*ix)*3.4,ty=(Math.sin(pt)*iy)*3.4,tz=(-cy*cp*iy-sy*ix)*3.4;
-  let fy=ty;if(!ix&&!iy)fy=(-1.25-P.y)*.8;if(jump){ fy = 8.5; P.v.y = Math.max(P.v.y, 9.0); }P.v.x+=(tx-P.v.x)*k;P.v.y+=(fy-P.v.y)*k;P.v.z+=(tz-P.v.z)*k;
+  let fy=ty;if(!ix&&!iy)fy=(-1.25-P.y)*.8;if(jump)fy=3;P.v.x+=(tx-P.v.x)*k;P.v.y+=(fy-P.v.y)*k;P.v.z+=(tz-P.v.z)*k;
   P.addScaledVector(P.v,dt);P.y=Math.max(g+.05,Math.min(-1,P.y))}
   else{const sp=g<.1?3:5.2,tx=(-sy*iy+cy*ix)*sp,tz=(-cy*iy-sy*ix)*sp;P.v.x+=(tx-P.v.x)*k;P.v.z+=(tz-P.v.z)*k;
-  P.x+=P.v.x*dt;P.z+=P.v.z*dt;const g2=H(P.x,P.z);P.v.y-=15*dt;P.y+=P.v.y*dt;
-  if(P.y<=g2){P.y=g2;P.v.y=0;if(jump)P.v.y=8.0}}
+  P.x+=P.v.x*dt;P.z+=P.v.z*dt;const g2=H(P.x,P.z);P.v.y-=18*dt;P.y+=P.v.y*dt;
+  if(P.y<=g2){P.y=g2;P.v.y=0;if(jump)P.v.y=6.2}}
   cam.position.set(P.x,P.y+1.6,P.z);cam.rotation.set(pt,ya,0);cam.getWorldDirection(fw);rt.set(Math.cos(ya),0,-Math.sin(ya));
   const spd=Math.min(1.3,Math.hypot(P.v.x,P.v.z)/5.2);if(emote&&(spd>.3||jump))emote=0;ph+=dt*(swim?2+spd*3:spd*9);
   const vt=tp||emote>0,tg=vt&&spd>.15?Math.atan2(P.v.x,P.v.z):emote?ya:ya+Math.PI;byaw+=Math.atan2(Math.sin(tg-byaw),Math.cos(tg-byaw))*Math.min(1,dt*10);
   me.root.visible=true;me.hd.visible=vt;me.root.position.set(P.x,P.y,P.z);me.root.rotation.y=byaw;
   const air=!swim&&P.y>H(P.x,P.z)+.25;
-  let mdl=emote||(swim?(jump?3:1):air?(P.v.y>0?7:8):0);
+  let mdl=emote||(swim?1:air?(P.v.y>0?7:8):0);
   if(dragging) mdl=9;
   pose(me,U.uT.value,ph,spd,mdl,!!held,0);
   net(dt,U.uT.value,spd,mdl);
