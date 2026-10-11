@@ -285,7 +285,7 @@ function pose(B,t,ph,sp,md,hold,ko){
   if(hold&&md<2)r(B.aR,-1.57,0,0);
 }
 // ---------- state ----------
-let rm=null,rn='',uname='',orbs=0,best=0,emote=0,tp=false,inGame=false,ph=0,byaw=0;
+let rm=null,rn='',uname='',orbs=0,best=0,emote=0,tp=false,inGame=false,ph=0,byaw=0,nightMode=false;
 let myKo=0, dragging=null, dragT=0, pulledBy=null, lastPullT=0;
 const pullTo=new V3();
 const me=mkBody(Math.random()),rem={};scene.add(me.root);
@@ -623,7 +623,6 @@ async function toggleMic(){
   }catch(e){mic=null;hud('mic blocked by this viewer')}
 }
 // ---------- home -> play ----------
-let nightMode = false;
 $('dn-btn').onclick=()=>{
   nightMode = !nightMode;
   const b = $('dn-btn');
