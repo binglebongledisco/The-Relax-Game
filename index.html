@@ -11,6 +11,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:#9bb;touch-action:none
 button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-radius:50%;font:600 clamp(12px,1.9vmin,16px) Georgia,serif;touch-action:none;-webkit-tap-highlight-color:transparent;z-index:4;padding:0;cursor:pointer}
 #gb{right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px)}
 #jb{right:calc(max(14px,env(safe-area-inset-right)) + clamp(84px,15vmin,108px));bottom:max(14px,env(safe-area-inset-bottom));width:clamp(50px,9.5vmin,68px);height:clamp(50px,9.5vmin,68px);font-size:clamp(10px,1.6vmin,13px)}
+#sb{display:none;position:fixed;right:calc(max(14px,env(safe-area-inset-right)) + clamp(42px,7.5vmin,54px));bottom:calc(max(14px,env(safe-area-inset-bottom)) + clamp(60px,11vmin,80px));width:clamp(50px,9.5vmin,68px);height:clamp(50px,9.5vmin,68px);font-size:clamp(9px,1.4vmin,12px);border-radius:50%;background:#0007;border:2px solid #fff6;color:#fff;font-weight:700;z-index:6;cursor:pointer;-webkit-tap-highlight-color:transparent;align-items:center;justify-content:center}
+#sb.active{background:#ff7a1acc;border-color:#fff;box-shadow:0 0 10px #ff7a1a88}
 #st{display:none;position:fixed;left:max(10px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top));color:#fff;font:600 clamp(11px,1.7vmin,14px) Georgia,serif;text-shadow:0 1px 4px #000a;background:#0007;padding:6px 12px;border-radius:14px;max-width:max(140px,calc(100vw - 380px));line-height:1.35;z-index:4;pointer-events:none}
 #eb{display:none;position:fixed;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));flex-direction:row;gap:clamp(3px,.6vmin,5px);align-items:center;background:#0007;padding:clamp(4px,.8vmin,6px);border-radius:24px;border:1px solid #fff4;z-index:4}
 #eb i{font-style:normal;display:flex;align-items:center;justify-content:center;width:clamp(32px,5.4vmin,42px);height:clamp(32px,5.4vmin,42px);background:#ffffff15;border:1px solid #fff5;border-radius:50%;font-size:clamp(15px,2.8vmin,20px);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:background .15s,border-color .15s;line-height:1}
@@ -47,7 +49,7 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 </style></head><body>
 <canvas id="c"></canvas><div id="ov"></div>
 <div id="jr"><div id="jk"></div></div>
-<button id="jb">Up</button><button id="gb">Grab</button>
+<button id="sb">Sprint</button><button id="jb">Up</button><button id="gb">Grab</button>
 <div id="hint">Left thumb walks, right thumb looks. Grab rocks, crystals, ducks, beach balls and mushrooms; hold to charge, release to throw. Stand next to a friend and press Grab to pull them around. A well-aimed throw knocks them over. Wade into a pond and look down to dive.</div>
 <div id="home"><div id="ttl">Relaxing<br>Bingus The game</div><div id="acts"><b>Dance</b><b>Wave</b><b>Sit</b><b>Stretch</b><b>Cheer</b><b>Swim &amp; dive</b><b>Throw far</b><b>Collect orbs</b><b>Rubber ducks</b></div>
 <input id="un" placeholder="Your name (optional)" maxlength="16" autocomplete="off">
@@ -616,6 +618,7 @@ $('play').onclick=()=>{
   $('home').style.display='none';inGame=true;
   $('gb').style.display='block';
 $('jb').style.display='block';
+$('sb').style.display='flex';
 $('st').style.display='block';
 $('eb').style.display='flex';
 $('hint').style.display='block';
@@ -692,6 +695,12 @@ function act(){
 }
 $('gb').onpointerdown=e=>{e.preventDefault();gt=performance.now();$('gb').setPointerCapture(e.pointerId)};$('gb').onpointerup=act;
 $('jb').onpointerdown=e=>{e.preventDefault();jump=true;$('jb').setPointerCapture(e.pointerId)};$('jb').onpointerup=$('jb').onpointercancel=()=>jump=false;
+let sprinting = false;
+$('sb').onclick = () => {
+  sprinting = !sprinting;
+  $('sb').textContent = sprinting ? 'Unsprint' : 'Sprint';
+  $('sb').className = sprinting ? 'active' : '';
+};
 cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);$('hint').style.opacity=0;
 if(e.pointerType!=='mouse'&&e.clientX<innerWidth*.45&&joy==null){joy=e.pointerId;jo=[e.clientX,e.clientY];const j=$('jr');j.style.display='block';j.style.left=jo[0]+'px';j.style.top=jo[1]+'px'}
 else if(look==null){look=e.pointerId;lx=e.clientX;ly=e.clientY}};
@@ -748,7 +757,8 @@ if(myKo>0){
   if(fr%30===0) hud();
 } else {
   if(swim){const cp=Math.cos(pt),tx=(-sy*cp*iy+cy*ix)*3.4,ty=(Math.sin(pt)*iy)*3.4,tz=(-cy*cp*iy-sy*ix)*3.4;
-  let fy=ty;if(!ix&&!iy)fy=(-1.25-P.y)*.8;if(jump)fy=3;P.v.x+=(tx-P.v.x)*k;P.v.y+=(fy-P.v.y)*k;P.v.z+=(tz-P.v.z)*k;
+  let fy=ty;if(!ix&&!iy)fy=(-1.25-P.y)*.8;if(jump)fy=3;const spdMult = sprinting ? 1.7 : 1.0;
+P.v.x+=(tx*spdMult-P.v.x)*k;P.v.y+=(fy-P.v.y)*k;P.v.z+=(tz*spdMult-P.v.z)*k;
   P.addScaledVector(P.v,dt);P.y=Math.max(g+.05,Math.min(-1,P.y))}
   else{const sp=g<.1?3:5.2,tx=(-sy*iy+cy*ix)*sp,tz=(-cy*iy-sy*ix)*sp;P.v.x+=(tx-P.v.x)*k;P.v.z+=(tz-P.v.z)*k;
   P.x+=P.v.x*dt;P.z+=P.v.z*dt;const g2=H(P.x,P.z);P.v.y-=18*dt;P.y+=P.v.y*dt;
