@@ -758,7 +758,7 @@ if(myKo>0){
   const vt=tp||emote>0,tg=vt&&spd>.15?Math.atan2(P.v.x,P.v.z):emote?ya:ya+Math.PI;byaw+=Math.atan2(Math.sin(tg-byaw),Math.cos(tg-byaw))*Math.min(1,dt*10);
   me.root.visible=true;me.hd.visible=vt;me.root.position.set(P.x,P.y,P.z);me.root.rotation.y=byaw;
   const air=!swim&&P.y>H(P.x,P.z)+.25;
-  let mdl=emote||(swim?1:air?(P.v.y>0?7:8):0);
+  let mdl=emote||(swim?(jump?3:1):air?(P.v.y>0?7:8):0);
   if(dragging) mdl=9;
   pose(me,U.uT.value,ph,spd,mdl,!!held,0);
   net(dt,U.uT.value,spd,mdl);
