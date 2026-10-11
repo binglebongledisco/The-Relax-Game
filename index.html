@@ -107,7 +107,7 @@ const skyM=new T.Mesh(new T.SphereGeometry(300,16,12),new T.ShaderMaterial({side
 vertexShader:'varying vec3 vD;void main(){vD=position;gl_Position=(projectionMatrix*modelViewMatrix*vec4(position,1.)).xyww;}',
 fragmentShader:'varying vec3 vD;uniform vec3 uSun;uniform float uT;'+NZ+SKY2+'void main(){'+
 'vec3 col=sky(normalize(vD),uSun,uT);' +
-'if(' + str(str('nightMode')).lower() + ') {' +
+'if(nightMode) {' +
 '  col=vec3(0.02,0.03,0.07);' +
 '  float s=fract(sin(dot(normalize(vD).xz*150.,vec2(12.9898,78.233)))*43758.5453);' +
 '  if(s>0.975){ float colS=fract(s*10.); vec3 stC=colS<0.3?vec3(1,0.8,0.8):colS<0.6?vec3(0.8,0.9,1):vec3(1,1,0.7); col+=stC*(s-0.975)*40.; }' +
