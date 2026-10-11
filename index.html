@@ -169,7 +169,16 @@ const nx=H(x-1,z)-H(x+1,z),nz=H(x,z-1)-H(x,z+1),l=Math.hypot(nx,2,nz);na[k]=nx/l
 c.g.attributes.position.needsUpdate=c.g.attributes.normal.needsUpdate=true;c.g.computeBoundingSphere();c.m.position.set(ox,0,oz);
 let s=((cx*73856093)^(cz*19349663))>>>0;const rnd=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296};
 let n=0;for(let t=0;t<14&&n<MT;t++){const x=ox+(rnd()-.5)*CS,z=oz+(rnd()-.5)*CS,h=H(x,z),sc=.8+rnd()*.8,ry=rnd()*6.3;if(h<1.3||h>20||slope(x,z,h)>.6)continue;
-dm.position.set(x,h-.15,z);dm.rotation.set((rnd()-.5)*.08,ry,(rnd()-.5)*.08);dm.scale.setScalar(sc);dm.updateMatrix();c.tr.setMatrixAt(n,dm.matrix);c.tr.setColorAt(n++,TC[rnd()*7|0])}
+dm.position.set(x,h-.15,z);dm.rotation.set((rnd()-.5)*.08,ry,(rnd()-.5)*.08);dm.scale.setScalar(sc);dm.updateMatrix();c.tr.setMatrixAt(n,dm.matrix);
+    if(rnd()<0.3){
+      const col=new T.Color().setHSL(rnd(),1.0,0.6);
+      c.tr.setColorAt(n,col);
+      rainbowTrees.push({x,z});
+    } else {
+      c.tr.setColorAt(n,TC[rnd()*7|0]);
+    }
+    n++;
+}
 c.tr.count=n;c.tr.instanceMatrix.needsUpdate=true;if(c.tr.instanceColor)c.tr.instanceColor.needsUpdate=true;n=0;
 for(let t=0;t<MG;t++){const x=ox+(rnd()-.5)*CS,z=oz+(rnd()-.5)*CS,h=H(x,z),sc=.8+rnd()*.9,ry=rnd()*6.3;if(h<.45||h>18||slope(x,z,h)>.5)continue;
 dm.position.set(x,h-.03,z);dm.rotation.set(0,ry,0);dm.scale.setScalar(sc);dm.updateMatrix();c.gr.setMatrixAt(n,dm.matrix);c.gr.setColorAt(n++,GC[rnd()*3|0])}
@@ -181,8 +190,20 @@ for(const c of pool){const d=Math.max(Math.abs(c.cx-pcx),Math.abs(c.cz-pcz));c.g
 const P=new V3();P.v=new V3();let ya=0,pt=-.1;
 for(let z=0;z<400;z+=4){const h=H(0,z);if(h>2&&h<7){P.z=z;P.y=h;break}}
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,1),p=g.attributes.position.array;for(let i=0;i<p.length;i+=3){const s=1+.35*(hs(p[i]*7,p[i+1]*5+p[i+2]*3)-.5);p[i]*=s;p[i+1]*=s;p[i+2]*=s}g.computeVertexNormals();return g})();
-const rms=[0x7a7770,0x8b7e6a,0x5f6468].map(c=>new T.MeshLambertMaterial({color:c})),rocks=[];let held=null;
-function place(m){const a=Math.random()*6.283,r=8+Math.random()*48,x=P.x+Math.cos(a)*r,z=P.z+Math.sin(a)*r;m.position.set(x,H(x,z)+m.u.r*.5,z);m.u.rest=true;m.u.v.set(0,0,0);if(m.u.fl&&m.position.y<0){m.position.y=0;m.u.rest=false}}
+const rms=[0x7a7770,0x8b7e6a,0x5f6468].map(c=>new T.MeshLambertMaterial({color:c})),rocks=[];let held=null,rainbowTrees=[];
+function place(m){
+  let x, z;
+  if(m.u.kind===8 && rainbowTrees.length>0){
+    const rt = rainbowTrees[Math.floor(Math.random()*rainbowTrees.length)];
+    const a = Math.random()*6.283, r = Math.random()*3;
+    x = rt.x + Math.cos(a)*r;
+    z = rt.z + Math.sin(a)*r;
+  } else {
+    const a=Math.random()*6.283,r=8+Math.random()*48;
+    x=P.x+Math.cos(a)*r; z=P.z+Math.sin(a)*r;
+  }
+  m.position.set(x,H(x,z)+m.u.r*.5,z);m.u.rest=true;m.u.v.set(0,0,0);if(m.u.fl&&m.position.y<0){m.position.y=0;m.u.rest=false}
+}
 for(let i=0;i<36;i++){const r=.15+Math.random()*.25,m=new T.Mesh(rg,rms[i%3]);m.scale.set(r*1.2,r*.8,r*1.1);m.rotation.set(Math.random()*6,Math.random()*6,0);m.castShadow=true;m.u={r,kind:8,v:new V3(),rest:true,held:false};place(m);rocks.push(m);scene.add(m)}
 const PH=(c,o)=>new T.MeshPhongMaterial(Object.assign({color:c,shininess:90,specular:0x555555},o)),hue=()=>new T.Color().setHSL(Math.random(),.65,.55);
 function mkItem(k){let m,r=.25,b=.3,fl=0;
