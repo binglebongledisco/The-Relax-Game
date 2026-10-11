@@ -748,11 +748,20 @@ if(myKo>0){
   if(fr%30===0) hud();
 } else {
   if(swim){
-    const cp=Math.cos(pt),tx=(-sy*cp*iy+cy*ix)*3.4,ty=(Math.sin(pt)*iy)*3.4,tz=(-cy*cp*iy-sy*ix)*3.4;
-    let fy=ty;if(!ix&&!iy)fy=(-1.25-P.y)*.8;
-    if(jump){ fy=6.5; P.v.y=6.5; } // Enhanced jump impulse at the surface/water
-    P.v.x+=(tx-P.v.x)*k;P.v.y+=(fy-P.v.y)*k;P.v.z+=(tz-P.v.z)*k;
-    P.addScaledVector(P.v,dt);P.y=Math.max(g+.05,Math.min(0.1,P.y))
+    if(P.y <= 0.05){
+      const cp=Math.cos(pt),tx=(-sy*cp*iy+cy*ix)*3.4,ty=(Math.sin(pt)*iy)*3.4,tz=(-cy*cp*iy-sy*ix)*3.4;
+      let fy=ty;if(!ix&&!iy)fy=(-1.25-P.y)*.8;
+      if(jump){ fy=6.2; P.v.y=6.2; }
+      P.v.x+=(tx-P.v.x)*k;P.v.y+=(fy-P.v.y)*k;P.v.z+=(tz-P.v.z)*k;
+      P.addScaledVector(P.v,dt);P.y=Math.max(g+.05,Math.min(0,P.y));
+    } else {
+      // Airborne leap above water
+      const sp=3.4,tx=(-sy*iy+cy*ix)*sp,tz=(-cy*iy-sy*ix)*sp;
+      P.v.x+=(tx-P.v.x)*k;P.v.z+=(tz-P.v.z)*k;
+      P.x+=P.v.x*dt;P.z+=P.v.z*dt;
+      P.v.y-=18*dt;P.y+=P.v.y*dt;
+      if(P.y<=0){P.y=0;P.v.y=0;}
+    }
   }
   else{const sp=g<.1?3:5.2,tx=(-sy*iy+cy*ix)*sp,tz=(-cy*iy-sy*ix)*sp;P.v.x+=(tx-P.v.x)*k;P.v.z+=(tz-P.v.z)*k;
   P.x+=P.v.x*dt;P.z+=P.v.z*dt;const g2=H(P.x,P.z);P.v.y-=18*dt;P.y+=P.v.y*dt;
@@ -762,7 +771,9 @@ if(myKo>0){
   const vt=tp||emote>0,tg=vt&&spd>.15?Math.atan2(P.v.x,P.v.z):emote?ya:ya+Math.PI;byaw+=Math.atan2(Math.sin(tg-byaw),Math.cos(tg-byaw))*Math.min(1,dt*10);
   me.root.visible=true;me.hd.visible=vt;me.root.position.set(P.x,P.y,P.z);me.root.rotation.y=byaw;
   const air=!swim&&P.y>H(P.x,P.z)+.25;
-  let mdl=emote||(swim?(P.v.y>2?7:1):air?(P.v.y>0?7:8):0);
+  const isWaterAir=swim&&P.y>0.02;
+  const air=(!swim&&P.y>H(P.x,P.z)+.25)||isWaterAir;
+  let mdl=emote||(swim&&!isWaterAir?1:air?(P.v.y>0?7:8):0);
   if(dragging) mdl=9;
   pose(me,U.uT.value,ph,spd,mdl,!!held,0);
   net(dt,U.uT.value,spd,mdl);
