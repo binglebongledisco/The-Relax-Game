@@ -197,12 +197,11 @@ cl(0,5.3,0,1.5,.7);cl(0,4,0,1.4,.2);return mergeParts(parts)})();
 const lighthouseG=(()=>{
   const parts=[],white=[.94,.94,.92],red=[.78,.20,.16],roof=[.22,.24,.30],glass=[1.0,.86,.42],rock=[.42,.40,.36];
   const M4r=a=>new M4().makeRotationY(a);
-  // ---- island base: wide, flat disc under the tower ----
-  parts.push([new T.CylinderGeometry(15.5,16.0,1.2,24).translate(0,3.4,0),new M4(),rock,.35,(x,y,z)=>.7+.3*hs(x*3.7,z*3.7)]);
-  parts.push([new T.CylinderGeometry(13.0,15.5,2.0,24).translate(0,4.9,0),new M4(),rock,.30,(x,y,z)=>.75+.25*hs(x*5.1,z*5.1)]);
-  parts.push([new T.CylinderGeometry(8.0,13.0,1.6,24).translate(0,6.6,0),new M4(),rock,.22,(x,y,z)=>.8+.2*hs(x*6.3,z*6.3)]);
-  // ---- tower base platform ----
-  parts.push([new T.CylinderGeometry(4.5,6.5,2.4,20).translate(0,8.6,0),new M4(),white,.08,(x,y,z)=>.94+.06*hs(x*8,y*8)]);
+  // ---- no mesh island — the terrain itself forms the island via islandOverride().
+  // The tower base platform sits directly at the top of the terrain island (+5 at centre).
+  // It's wide enough to fully cover the island top where islandOverride peaks.
+  parts.push([new T.CylinderGeometry(6.0,8.5,3.2,24).translate(0,6.6,0),new M4(),white,.05,(x,y,z)=>.94+.06*hs(x*8,y*8)]);
+  parts.push([new T.CylinderGeometry(7.2,7.2,.5,24).translate(0,5.2,0),new M4(),rock,.05,(x,y,z)=>.75+.25*hs(x*4,z*4)]);
   // ---- tall tapered tower, 30u height ----
   parts.push([new T.CylinderGeometry(2.2,4.5,30,20).translate(0,24.8,0),mt(0,0,0),white,.04,(x,y,z)=>.94+.06*hs(x*9,y*9)]);
   // ---- red stripe bands (scaled up) ----
