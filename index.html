@@ -129,18 +129,19 @@ float lit=clamp(1.-(dl-de)*2.2-de*.35,.2,1.);
 vec3 cc=mix(vec3(.5,.56,.68),vec3(1.,.95,.88),lit)+vec3(1.,.8,.5)*pow(mu,5.)*.35*lit;
 float a=de*.8*tr*fade;cl+=cc*a;tr-=a;}
 c=c*tr+cl;}
-return c;}`;
+// night override: dark navy, no clouds, no stars, no moon
+return vec3(.015,.028,.058)*(1.+0.3*smoothstep(0.,0.3,d.y));}`;
 // ---------- renderer / scene ----------
 const cv=$('c'),rd=new T.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});
 const rtM=new T.WebGLRenderTarget(256,256),clipP=new T.Plane(new T.Vector3(0,-1,0),0);
 const pm=Math.min(devicePixelRatio||1,1);let pr=pm;
 rd.shadowMap.enabled=true;rd.shadowMap.type=T.PCFShadowMap;rd.shadowMap.autoUpdate=false;
 const scene=new T.Scene(),cam=new T.PerspectiveCamera(70,1,.1,400);cam.rotation.order='YXZ';
-scene.fog=new T.FogExp2(0xb9cfe6,.014);const fogC=scene.fog.color,FOG0=fogC.clone();
+scene.fog=new T.FogExp2(0x0a1426,.014);const fogC=scene.fog.color,FOG0=fogC.clone();
 function rs(){rd.setPixelRatio(pr);rd.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
 addEventListener('resize',rs);rs();
-scene.add(new T.HemisphereLight(0xbfd8ff,0x7a4a6a,.85));
-const sun=new T.DirectionalLight(0xfff0d8,1.1);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+const hemi=new T.HemisphereLight(0x1a2a4a,0x0a0a14,.12);scene.add(hemi);
+const sun=new T.DirectionalLight(0x4466aa,0.08);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
 const sc=sun.shadow.camera;sc.left=sc.bottom=-36;sc.right=sc.top=36;sc.near=1;sc.far=170;sun.shadow.bias=-.0006;
 scene.add(sun,sun.target);
 const skyM=new T.Mesh(new T.SphereGeometry(300,16,12),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,fog:false,uniforms:{uT:U.uT,uSun:{value:SUN}},
