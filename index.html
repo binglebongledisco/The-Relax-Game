@@ -221,6 +221,239 @@ else if(k==4){const c=hue();m=new T.Mesh(new T.SphereGeometry(.16,10,8),new T.Me
 else{m=new T.Group();const y=PH(0xffd21f,{shininess:120}),bd=new T.Mesh(new T.SphereGeometry(.22,12,8).scale(1,.8,1.3),y),hd=new T.Mesh(new T.SphereGeometry(.13,10,8),y),bk=new T.Mesh(new T.ConeGeometry(.05,.1,6).rotateX(1.5708),PH(0xff7a1a));hd.position.set(0,.2,.17);bk.position.set(0,.19,.3);m.add(bd,hd,bk);r=.25;fl=1}
 m.traverse(o=>o.castShadow=true);m.u={r,b,fl,kind:k,v:new V3(),rest:true,held:false};place(m);rocks.push(m);scene.add(m)}
 for(let i=0;i<48;i++)mkItem(i%6);
+
+// ---------- procedural cats ----------
+const CAT_FURS=[
+  [0xd9a04c, 0xf3d9b1], // ginger tabby
+  [0x2b2b2b, 0x555555], // black
+  [0xf2f2f2, 0xdcdcdc], // white
+  [0x808080, 0xb0b0b0], // grey
+  [0x3a2a1e, 0x6b5340], // brown
+  [0xe8b07a, 0xfff0dc], // cream
+  [0x4a3520, 0x8a6a44], // dark tabby
+  [0xc25e2a, 0xe0a06a], // calico base
+];
+function mkCat(furPair){
+  const body=new T.MeshPhongMaterial({color:furPair[0],shininess:18,specular:0x444444}),belly=new T.MeshPhongMaterial({color:furPair[1],shininess:12,specular:0x444444}),nose=new T.MeshPhongMaterial({color:0xf58ba0,shininess:40});
+  const B={root:new T.Group(),mode:'idle',modeT:0,blinkT:0,blink:0,lookYaw:0,breath:0};
+  B.root.scale.setScalar(.16);
+  const G=(p,x,y,z)=>{const g=new T.Group();g.position.set(x,y,z);p.add(g);return g};
+  const S=(p,r,m,x,y,z,seg)=>{const o=new T.Mesh(new T.SphereGeometry(r,seg||10,seg||8),m);o.position.set(x,y,z);o.castShadow=true;p.add(o);return o};
+  const BOX=(p,w,h,d,m,x,y,z)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;p.add(o);return o};
+  const CONE=(p,r,h,m,x,y,z)=>{const o=new T.Mesh(new T.ConeGeometry(r,h,6),m);o.position.set(x,y,z);o.castShadow=true;p.add(o);return o};
+  // torso: low capsule-ish body
+  const tor=B.tor=G(B.root,0,1.1,0);
+  S(tor,.85,body,0,0,0,12);
+  S(tor,.7,body,0,-.15,-.55,12);
+  S(tor,.7,belly,0,-.35,0,10); // lighter belly
+  // head
+  const hd=B.hd=G(tor,0,.6,-.75);
+  S(hd,.62,body,0,0,0,14);
+  S(hd,.35,body,0,.05,.55,10); // muzzle
+  S(hd,.09,nose,0,.02,.82,8);
+  // eyes (tiny black spheres)
+  S(hd,.09,new T.MeshBasicMaterial({color:0x1a1a1a}),-.28,.1,.48,8);
+  S(hd,.09,new T.MeshBasicMaterial({color:0x1a1a1a}), .28,.1,.48,8);
+  // ears (cones)
+  const earL=B.earL=G(hd,-.3,.55,0);CONE(earL,.24,.4,body,0,.2,0);
+  const earR=B.earR=G(hd,.3,.55,0);CONE(earR,.24,.4,body,0,.2,0);
+  // legs: 4, pivoted at shoulder/hip so rotation swings them
+  const legR=(x,z)=>{const L=G(tor,x,-.3,z);S(L,.16,body,0,-.35,0,8);return L};
+  B.lFR=legR(-.5,-.55);B.lFL=legR(.5,-.55);B.lBR=legR(-.5,.55);B.lBL=legR(.5,.55);
+  // tail: 3 segments, pivot at rear
+  const tail=B.tail=G(tor,0,.2,.85);
+  const t1=S(tail,.13,body,0,.2,.15,8),t2=S(tail,.11,body,0,.55,.3,8),t3=S(tail,.1,body,0,.9,.42,8);
+  B.tailSegs=[t1,t2,t3];
+  B.root.traverse(o=>{if(o.isMesh)o.castShadow=true});
+  scene.add(B.root);
+  return B;
+}
+
+// Cat behavior FSM: idle / walk / sit / lay / sleep
+const CATS=[];
+const CAT_MAX=10;
+const CAT_STATES=['walk','idle','sit','lay','sleep'];
+
+function spawnCatNear(a,b){
+  // pick a random point on a ring around the player, snap to ground
+  const ang=a+Math.random()*(b-a);
+  const r=12+Math.random()*40;
+  const x=P.x+Math.cos(ang)*r, z=P.z+Math.sin(ang)*r;
+  const h=H(x,z);
+  if(h<1.0||h>20) return null;                 // stay on land, not underwater, not on peaks
+  if(slope(x,z,h)>.55) return null;            // avoid cliffs
+  const pair=CAT_FURS[Math.random()*CAT_FURS.length|0];
+  const B=mkCat(pair);
+  B.root.position.set(x,h,z);
+  B.yaw=Math.random()*6.283;
+  B.root.rotation.y=B.yaw;
+  B.state='idle';
+  B.stateT=1+Math.random()*3;
+  B.walkDir=new T.Vector3();
+  B.speed=0;
+  B.catScale=.15+Math.random()*.04;
+  B.root.scale.setScalar(B.catScale);
+  return B;
+}
+
+function initCats(){
+  for(let i=0;i<CAT_MAX;i++){
+    const c=spawnCatNear(0,6.283);
+    if(c)CATS.push(c);
+  }
+}
+
+function catLookAtPlayer(B,dt){
+  // if awake and player is close, head turns toward player
+  const dx=P.x-B.root.position.x, dz=P.z-B.root.position.z;
+  const d2=dx*dx+dz*dz;
+  let target=0;
+  if(B.state!=='sleep' && d2<36){
+    const wa=Math.atan2(dx,dz)-B.root.rotation.y;
+    // clamp head yaw to ±0.8 rad so it looks over its shoulder
+    target=Math.max(-.8,Math.min(.8,Math.atan2(Math.sin(wa),Math.cos(wa))));
+  }
+  B.lookYaw+=(target-B.lookYaw)*Math.min(1,dt*3);
+  B.hd.rotation.y=B.lookYaw;
+}
+
+function catPose(B,t,dt){
+  const s=Math.sin, c=Math.cos;
+  const st=B.state;
+  // breathing / blink baseline
+  B.blinkT-=dt;
+  if(B.blinkT<=0){B.blinkT=2+Math.random()*3;B.blink=.12}
+  if(B.blink>0)B.blink=Math.max(0,B.blink-dt);
+  const blinkY=B.blink>0?.05:1;
+
+  // reset torso baseline
+  B.tor.rotation.set(0,0,0);
+  B.tor.position.y=1.1;
+  B.earL.rotation.set(0,0,0);
+  B.earR.rotation.set(0,0,0);
+
+  if(st==='walk'){
+    // leg swing in trot pattern: FR+BL move together, FL+BR opposite
+    const ph=B.ph+=dt*7.5;
+    B.lFR.rotation.x=s(ph)*.75;
+    B.lBL.rotation.x=s(ph)*.75;
+    B.lFL.rotation.x=-s(ph)*.75;
+    B.lBR.rotation.x=-s(ph)*.75;
+    // body bob
+    B.tor.position.y=1.1+Math.abs(s(ph))*0.12;
+    // head slightly down/forward, small yaw sway
+    B.tor.rotation.x=.05;
+    B.hd.rotation.z=s(ph*.5)*.08;
+    // tail up and swaying
+    const sway=s(t*3+ph*.2)*.4;
+    B.tail.rotation.x=-.6+s(t*2)*.15;
+    B.tail.rotation.z=sway;
+    B.tailSegs.forEach((seg,i)=>{seg.rotation.z=s(t*3+ph*.2+i*.4)*.15});
+  }
+  else if(st==='idle'){
+    // standing still, tail flicks, ears twitch
+    B.lFR.rotation.x=0;B.lFL.rotation.x=0;B.lBR.rotation.x=0;B.lBL.rotation.x=0;
+    B.tail.rotation.x=-.2+s(t*1.5)*.1;
+    B.tail.rotation.z=s(t*2.2)*.6;
+    B.tailSegs.forEach((seg,i)=>{seg.rotation.z=s(t*2.2+i*.5)*.2});
+    // occasional ear twitch
+    const tw=Math.max(0,Math.sin(t*3.7)-.9)*10;
+    B.earL.rotation.z=tw*.4;
+    B.earR.rotation.z=-tw*.4;
+  }
+  else if(st==='sit'){
+    // haunches down, front legs straight
+    B.tor.rotation.x=-.28;
+    B.tor.position.y=.85;
+    B.lBR.rotation.x=-1.3;
+    B.lBL.rotation.x=-1.3;
+    B.lFR.rotation.x=.15;
+    B.lFL.rotation.x=.15;
+    B.tail.rotation.x=.2;
+    B.tail.rotation.z=s(t*1.6)*.9;
+    B.tailSegs.forEach((seg,i)=>{seg.rotation.z=s(t*1.6+i*.3)*.25});
+    B.earL.rotation.z=Math.max(0,Math.sin(t*2.4)-.85)*6*.4;
+    B.earR.rotation.z=-B.earL.rotation.z;
+  }
+  else if(st==='lay'){
+    // on belly, legs tucked, head up
+    B.tor.rotation.x=-.05;
+    B.tor.position.y=.45;
+    B.lFR.rotation.x=-1.1;B.lFL.rotation.x=-1.1;
+    B.lBR.rotation.x=1.4;B.lBL.rotation.x=1.4;
+    B.hd.rotation.x=-.15;
+    B.tail.rotation.x=.1;
+    B.tail.rotation.z=s(t*1.2)*.5;
+  }
+  else if(st==='sleep'){
+    // on side, slow breath
+    B.tor.rotation.x=-.05;
+    B.tor.rotation.z=.15;
+    B.tor.position.y=.42;
+    B.lFR.rotation.x=-1.15;B.lFL.rotation.x=-1.15;
+    B.lBR.rotation.x=1.4;B.lBL.rotation.x=1.4;
+    B.hd.rotation.z=.4;B.hd.rotation.x=-.2;
+    const br=1+Math.sin(t*1.4)*.03;
+    B.tor.scale.set(br,br,br);
+    B.earL.rotation.z=Math.max(0,Math.sin(t*1.7)-.85)*6*.3;
+    B.earR.rotation.z=-B.earL.rotation.z;
+  }
+
+  // apply blink scale to eyes (find eye meshes)
+  if(B._eyes===undefined){
+    B._eyes=[];
+    B.hd.traverse(o=>{if(o.isMesh&&o.geometry.type==='SphereGeometry'&&o.material&&o.material.color&&o.material.color.getHex()===0x1a1a1a)B._eyes.push(o)});
+  }
+  for(const e of B._eyes)e.scale.y=blinkY;
+}
+
+function pickNextCatState(B){
+  // probabilities tuned for "mostly calm"
+  const r=Math.random();
+  if(B.state==='sleep'){B.state='lay';B.stateT=1+Math.random()*2}
+  else if(B.state==='lay'){ r<.45?B.state='sleep':(r<.8?B.state='sit':B.state='idle'); B.stateT=2+Math.random()*4 }
+  else if(B.state==='sit'){ r<.3?B.state='lay':(r<.7?B.state='idle':B.state='walk'); B.stateT=1+Math.random()*3 }
+  else if(B.state==='walk'){ r<.4?B.state='idle':(r<.75?B.state='sit':B.state='lay'); B.stateT=1.5+Math.random()*3 }
+  else { r<.5?B.state='walk':(r<.85?B.state='sit':B.state='lay'); B.stateT=1+Math.random()*3 }
+}
+
+function updateCats(dt){
+  const t=U.uT.value;
+  for(const B of CATS){
+    B.stateT-=dt;
+    if(B.stateT<=0){pickNextCatState(B);B.stateT=2+Math.random()*4}
+    // walk = move forward
+    if(B.state==='walk'){
+      B.speed=Math.min(1.4,B.speed+dt*2);
+      const fx=Math.sin(B.root.rotation.y),fz=Math.cos(B.root.rotation.y);
+      const nx=B.root.position.x+fx*B.speed*dt;
+      const nz=B.root.position.z+fz*B.speed*dt;
+      const nh=H(nx,nz);
+      // turn if slope too steep or about to enter water
+      if(nh<.8||slope(nx,nz,nh)>.6){
+        B.root.rotation.y+= (Math.random()-.5)*2;
+      } else {
+        B.root.position.x=nx;B.root.position.z=nz;B.root.position.y=nh;
+      }
+      // drift player-relative idle: if far, recycle
+      const d=Math.hypot(B.root.position.x-P.x,B.root.position.z-P.z);
+      if(d>70){
+        const c=spawnCatNear(Math.atan2(B.root.position.x-P.x,B.root.position.z-P.z)-.5,
+                             Math.atan2(B.root.position.x-P.x,B.root.position.z-P.z)+.5);
+        if(c){B.root.position.copy(c.root.position);B.root.rotation.y=Math.random()*6.283;B.state='idle';B.stateT=2}
+      }
+    } else {
+      B.speed=Math.max(0,B.speed-dt*3);
+      // stay snapped to terrain
+      const g=H(B.root.position.x,B.root.position.z);
+      B.root.position.y=g;
+    }
+    catLookAtPlayer(B,dt);
+    catPose(B,t,dt);
+  }
+}
+initCats();
+
 const rings=[...Array(5)].map(()=>{const m=new T.Mesh(new T.RingGeometry(.3,.4,24).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));m.visible=false;m.t=9;scene.add(m);return m});let ri=0;
 function splash(x,z){sfx('splash');const r=rings[ri++%5];r.position.set(x,.06,z);r.t=0;r.visible=true;r.material.color.setHex(0xffffff)}
 const fw=new V3(),rt=new V3();
@@ -994,6 +1227,6 @@ for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t
 poiTick(dt,t);if(fr%6===0)mixAudio(uw);
 if(fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
 $('gb').style.transform=held&&gt?`scale(${1+Math.min((performance.now()-gt)/800,1)*.2})`:'';
-rd.render(scene,cam)}
+updateCats(dt);rd.render(scene,cam)}
 requestAnimationFrame(loop);
 </script></body></html>
