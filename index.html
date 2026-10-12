@@ -35,11 +35,6 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 #sdb{flex:0 0 auto;width:clamp(38px,6.5vh,52px);height:clamp(38px,6.5vh,52px);display:flex;align-items:center;justify-content:center;border-radius:50%;border:2px solid #fff;background:#2a0a4acc;color:#fff;font-size:clamp(16px,2.6vh,22px);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:transform .12s,background .12s}
 #sdb:hover{background:#4a2a6acc}
 #sdb:active{transform:scale(.86) rotate(-30deg)}
-#ndr{display:flex;gap:10px;align-items:center;width:min(78vw,360px);max-width:100%}
-#ndb{flex:0 0 auto;width:clamp(38px,6.5vh,52px);height:clamp(38px,6.5vh,52px);display:flex;align-items:center;justify-content:center;border-radius:50%;border:2px solid #fff;background:#2a0a4acc;color:#fff;font-size:clamp(16px,2.6vh,22px);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:transform .12s,background .12s}
-#ndb:hover{background:#4a2a6acc}
-#ndb:active{transform:scale(.86)}
-#ndl{color:#fff;font:600 clamp(13px,2.2vh,17px) Georgia,serif;text-shadow:0 1px 4px #000}
 #mp{color:#fff;font:600 clamp(10px,1.7vh,13px) Georgia,serif;text-shadow:0 1px 4px #000;background:#0007;padding:clamp(6px,1vh,10px) clamp(10px,1.5vh,14px);border-radius:12px;width:fit-content;max-width:min(82vw,440px);line-height:1.4;margin:0}
 #play{width:fit-content;padding:clamp(10px,1.9vh,18px) clamp(30px,6vh,60px);border-radius:40px;background:linear-gradient(#ffd23d,#ff7a1a);color:#3a1160;font-size:clamp(16px,3.4vh,24px);font-weight:900;border:3px solid #fff;box-shadow:0 .8vh 0 #8a2a00;animation:pl 1.2s ease-in-out infinite;cursor:pointer;-webkit-tap-highlight-color:transparent}
 @keyframes pl{50%{transform:scale(1.06)}}
@@ -67,7 +62,6 @@ button{background:radial-gradient(circle at 35% 30%,#ffffff40,#0a1a2caa);border-
 <input id="un" placeholder="Your name (optional)" maxlength="16" autocomplete="off">
 <input id="rm" placeholder="Room name (blank = solo)" maxlength="30" autocomplete="off">
 <div id="sdr"><input id="sd" placeholder="World seed (blank = room name or random)" maxlength="24" autocomplete="off"><b id="sdb" title="Random seed">🎲</b></div>
-<div id="ndr"><b id="ndb" title="Toggle day / night">☀️</b><span id="ndl">Daytime</span></div>
 <div id="mp">Multiplayer: type a room name, then open this same page on another device or browser tab and enter the same name to play together. Everyone in a room sees the same world when they use the same seed (blank = the room name). Hit 🎲 to roll a fresh world seed — the seed is shown in the top-left HUD, so you can share it.</div>
 <div id="play">PLAY</div></div>
 <div id="st"></div><div id="bn"></div>
@@ -99,9 +93,7 @@ const H=(x,z)=>{const h=BH(x,z),c=cave(x,z);if(!c||c.t)return h;const w=1-ss(3,9
 const NZ=`float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1,0)),f.x),mix(hs(i+vec2(0,1)),hs(i+vec2(1)),f.x),f.y);}
 float fb(vec2 p){float s=0.,a=.5;for(int k=0;k<3;k++){s+=a*vn(p);p=p*2.03+7.;a*=.5;}return s;}`;
-const SKY2=`uniform float uNight;vec3 sky(vec3 d,vec3 sn,float t){
-// ---- day sky (unchanged when uNight==0) ----
-float h=max(d.y,0.),mu=max(dot(d,sn),0.);
+const SKY2=`vec3 sky(vec3 d,vec3 sn,float t){float h=max(d.y,0.),mu=max(dot(d,sn),0.);
 float inv=1./(h+.15*pow(93.885-degrees(acos(h)),-1.253)),cT=dot(d,sn);vec3 bR=vec3(5.8e-6,1.356e-5,3.027e-5)*1.5,bM=vec3(3.2e-6,4.8e-6,7.1e-6),Fx=exp(-(bR*8400.+bM*1250.)*inv);float x5=cT*.5+.5,rP=.0597*(1.+x5*x5),mP=.0796*.36/pow(1.64-1.6*cT,1.5);vec3 sc=(bR*rP+bM*mP)/(bR+bM);float sE=340.;vec3 Lin=pow(sE*sc*(1.-Fx),vec3(1.5));Lin*=mix(vec3(1.),pow(sE*sc*Fx,vec3(.5)),clamp(pow(1.-sn.y,5.),0.,1.));vec3 c=pow((Lin+vec3(.1)*Fx+sE*19000.*Fx*smoothstep(.999957,.999977,cT))*.04+vec3(0.,.0003,.00075),vec3(.42))*.85;
 if(d.y>.01){vec3 q=d/d.y;float tr=1.,fade=smoothstep(.01,.2,d.y);vec3 cl=vec3(0.);
 for(int i=0;i<2;i++){vec2 p=q.xz*(1.+float(i)*.12)*.5+t*.012+float(i)*.31;
@@ -110,51 +102,6 @@ float lit=clamp(1.-(dl-de)*2.2-de*.35,.2,1.);
 vec3 cc=mix(vec3(.5,.56,.68),vec3(1.,.95,.88),lit)+vec3(1.,.8,.5)*pow(mu,5.)*.35*lit;
 float a=de*.8*tr*fade;cl+=cc*a;tr-=a;}
 c=c*tr+cl;}
-// ---- night sky (only when uNight>0) ----
-if(uNight>.001){
-  vec3 nd=normalize(d);
-  // dark navy gradient: zenith deep blue, horizon slightly lighter
-  float up=clamp(nd.y,0.,1.);
-  vec3 nightTop=vec3(.015,.028,.062);
-  vec3 nightHor=vec3(.06,.09,.16);
-  vec3 nightCol=mix(nightHor,nightTop,pow(up,.55));
-  // stars: sparse points from hashed cell grid, visible only above horizon
-  vec3 dir=nd;
-  // project onto a spherical grid; use 3 rotated layers for density
-  float starMask=0.;
-  for(int L=0;L<3;L++){
-    // rotate slightly per layer
-    float a=float(L)*2.1;
-    vec3 dd=vec3(dir.x*cos(a)-dir.z*sin(a), dir.y, dir.x*sin(a)+dir.z*cos(a));
-    // grid cells on sky sphere
-    float scale=180.+float(L)*60.;
-    vec2 uv=vec2(atan(dd.z,dd.x)/6.2831+.5, asin(clamp(dd.y,-1.,1.))/3.1416+.5);
-    vec2 cell=floor(uv*scale);
-    vec2 f=fract(uv*scale)-.5;
-    float rnd=hs(cell+float(L)*13.7);
-    if(rnd>.9955){
-      float d2=length(f);
-      float star=smoothstep(.28,.0,d2);
-      // twinkle
-      float tw=.75+.25*sin(t*(1.5+rnd*3.)+rnd*30.);
-      starMask+=star*tw;
-    }
-  }
-  // fade stars out near horizon
-  starMask*=smoothstep(.02,.25,nd.y);
-  vec3 starCol=vec3(1.,.96,.88)*starMask*1.6;
-  // moon: bright disc opposite the sun, i.e. at direction `sn` when sn is
-  // the moon direction (which is -sunDir)
-  float moonDot=dot(nd,sn);
-  float moonDisc=smoothstep(.9985,.9993,moonDot);
-  float moonGlow=pow(max(moonDot,0.),64.)*.55+pow(max(moonDot,0.),8.)*.14;
-  // subtle moon disc tint + craters
-  vec3 moonCol=vec3(1.,.98,.92)*moonDisc*2.2
-              +vec3(.75,.8,.95)*moonGlow;
-  nightCol+=starCol+moonCol;
-  // blend day/night based on uniform
-  c=mix(c,nightCol,uNight);
-}
 return c;}`;
 // ---------- renderer / scene ----------
 const cv=$('c'),rd=new T.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});
@@ -165,17 +112,14 @@ const scene=new T.Scene(),cam=new T.PerspectiveCamera(70,1,.1,400);cam.rotation.
 scene.fog=new T.FogExp2(0xb9cfe6,.014);const fogC=scene.fog.color,FOG0=fogC.clone();
 function rs(){rd.setPixelRatio(pr);rd.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
 addEventListener('resize',rs);rs();
-const hemi=new T.HemisphereLight(0xbfd8ff,0x7a4a6a,.85);scene.add(hemi);
+scene.add(new T.HemisphereLight(0xbfd8ff,0x7a4a6a,.85));
 const sun=new T.DirectionalLight(0xfff0d8,1.1);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
 const sc=sun.shadow.camera;sc.left=sc.bottom=-36;sc.right=sc.top=36;sc.near=1;sc.far=170;sun.shadow.bias=-.0006;
 scene.add(sun,sun.target);
-const skyM=new T.Mesh(new T.SphereGeometry(300,16,12),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,fog:false,uniforms:{uT:U.uT,uSun:{value:SUN},uNight:{value:0}},
+const skyM=new T.Mesh(new T.SphereGeometry(300,16,12),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,fog:false,uniforms:{uT:U.uT,uSun:{value:SUN}},
 vertexShader:'varying vec3 vD;void main(){vD=position;gl_Position=(projectionMatrix*modelViewMatrix*vec4(position,1.)).xyww;}',
 fragmentShader:'varying vec3 vD;uniform vec3 uSun;uniform float uT;'+NZ+SKY2+'void main(){gl_FragColor=vec4(sky(normalize(vD),uSun,uT),1.);}'}));
 skyM.frustumCulled=false;skyM.renderOrder=1;scene.add(skyM);
-const SUN0=SUN.clone();
-const MOON0=SUN.clone().negate();
-let nightOn=false;
 // ---------- water (no reflection — no more double vision) ----------
 const wU={uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.014}};
 const water=new T.Mesh(new T.PlaneGeometry(700,700).rotateX(-Math.PI/2),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,uniforms:wU,
@@ -487,31 +431,6 @@ function pose(B,t,ph,sp,md,hold,ko){
   else if(md==12){r(B.aR,-.4,0,-1.9+s(t*3)*.1);r(B.aL,-.4,0,1.9-s(t*3)*.1);r(B.hd,-.15,0,0);r(B.lR,0,0,.18);r(B.lL,0,0,-.18);B.tor.position.y=3+s(t*3)*.05}
   if(hold&&md<2)r(B.aR,-1.57,0,0);
 }
-// ---------- day / night toggle ----------
-function setNight(on){
-  nightOn=!!on;
-  try{localStorage.setItem('rlx-night',nightOn?'1':'0')}catch(_){}
-  // sun direction: sky + water shaders both hold a reference to SUN
-  SUN.copy(nightOn?MOON0:SUN0);
-  // main directional light (used for terrain + object lighting and shadows)
-  sun.color.setHex(nightOn?0x9fb8e6:0xfff0d8);
-  sun.intensity=nightOn?0.32:1.1;
-  // ambient fill
-  hemi.intensity=nightOn?0.22:0.85;
-  hemi.color.setHex(nightOn?0x2a3552:0xbfd8ff);
-  hemi.groundColor.setHex(nightOn?0x120a1a:0x7a4a6a);
-  // fog colour + density (mutate in place — water shader shares this Color)
-  fogC.setHex(nightOn?0x0a1426:0xb9cfe6);
-  scene.fog.density=nightOn?0.026:0.014;
-  // sky shader night blend
-  if(skyM.material.uniforms.uNight)skyM.material.uniforms.uNight.value=nightOn?1:0;
-  // update the button label
-  const b=$('ndb'),l=$('ndl');
-  if(b)b.textContent=nightOn?'🌙':'☀️';
-  if(l)l.textContent=nightOn?'Nighttime':'Daytime';
-}
-try{ if(localStorage.getItem('rlx-night')==='1')setTimeout(()=>setNight(true),0); }catch(_){}
-$('ndb').onclick=()=>setNight(!nightOn);
 // ---------- state ----------
 let rm=null,rn='',uname='',orbs=0,best=0,mined=0,emote=0,tp=false,inGame=false,ph=0,byaw=0;
 let myKo=0, dragging=null, dragT=0, pulledBy=null, lastPullT=0;
@@ -887,7 +806,7 @@ $('play').onclick=()=>{
   const n=$('rm').value.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g,'-').replace(/^[^a-z0-9]+/,'').slice(0,40);
   uname=$('un').value.trim().slice(0,16);
   try{localStorage.setItem('rlx-name',uname)}catch(e){}
-  $('home').style.display='none';inGame=true;initAudio();regen($('sd').value.trim().slice(0,24)||n||randSeed());setNight(nightOn);
+  $('home').style.display='none';inGame=true;initAudio();regen($('sd').value.trim().slice(0,24)||n||randSeed());
   $('gb').style.display='block';
 $('jb').style.display='block';
 $('st').style.display='block';
