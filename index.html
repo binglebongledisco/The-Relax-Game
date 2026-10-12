@@ -196,7 +196,7 @@ const lighthouseG=(()=>{
 })();
 const lighthouseM=new T.MeshLambertMaterial({vertexColors:true});
 const lhPool=[];
-const LH_MAX=4;
+const LH_MAX=64;
 
 const grassG=(()=>{const P=[],C=[],N=[];for(let b=0;b<5;b++){const a=b*1.26+hs(b,1)*.5,ca=Math.cos(a),sa=Math.sin(a),h=.5+hs(b,2)*.45,w=.045,ox=(hs(b,3)-.5)*.35,oz=(hs(b,4)-.5)*.35,lean=(hs(b,5)-.5)*.4;
 const q=(x,y)=>{const xx=x*ca,zz=x*sa;return[xx+ox+lean*y*y*ca,y*h,zz+oz+lean*y*y*sa+0]};
@@ -211,28 +211,11 @@ function mk(){const g=new T.BufferGeometry();g.setAttribute('position',new T.Buf
 const m=new T.Mesh(g,terrM);m.receiveShadow=true;const tr=new T.InstancedMesh(treeG,treeM,MT),gr=new T.InstancedMesh(grassG,grassM,MG);tr.frustumCulled=gr.frustumCulled=false;tr.setColorAt(0,TC[0]);gr.setColorAt(0,GC[0]);
 scene.add(m,tr,gr);const c={g,m,tr,gr,cx:1e9,cz:1e9};pool.push(c);return c}
 function trySpawnLighthouse(ox,oz){
-  // one candidate per 48-unit world cell
+  // NO conditions — one lighthouse per 48u cell, centered, no gate.
   const gx=Math.floor(ox/48), gz=Math.floor(oz/48);
-  // per-cell random gate so most cells are skipped — ~1 in 4 cells has a candidate
-  const seed=hs(gx*7.3,gz*11.9);
-  if(seed>.25)return;
-  // candidate world position: jittered inside the cell
-  const cx=gx*48+24+(hs(gx*3.1,gz*5.7)-.5)*18;
-  const cz=gz*48+24+(hs(gx*13.7,gz*2.3)-.5)*18;
-  // if we already have a lighthouse within 30 units of this candidate, skip
-  for(const L of lhPool){
-    const dx=L.position.x-cx,dz=L.position.z-cz;
-    if(dx*dx+dz*dz<900)return;
-  }
-  // island test: center above water, all 8 ring samples below
+  const cx=gx*48+24;
+  const cz=gz*48+24;
   const hc=H(cx,cz);
-  if(hc<1.5)return;
-  for(let k=0;k<8;k++){
-    const a=k*.7854;
-    const r=12;
-    const hx=H(cx+Math.cos(a)*r, cz+Math.sin(a)*r);
-    if(hx>=-0.5)return;
-  }
   // passed — build lighthouse group
   const g=new T.Group();
   g.position.set(cx, hc-0.15, cz);
