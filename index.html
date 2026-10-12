@@ -104,6 +104,7 @@ function showErr(m){let e=document.getElementById('err');if(!e){e=document.creat
 addEventListener('error',e=>showErr(e.message+' @'+e.lineno));const ce=console.error;console.error=(...a)=>{ce.apply(console,a);showErr(a.join(' ').slice(0,400))};
 const T=THREE,V3=T.Vector3,$=id=>document.getElementById(id);
 var WG={ter:1,cav:.8,wx:0};const U={uT:{value:0}},SUN=new V3(.6,.5,.45).normalize();
+const chezUniform={value:0};
 // ---------- noise ----------
 const hs=(x,y)=>{const n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n)};
 function vn(x,y){const i=Math.floor(x),j=Math.floor(y),a=x-i,b=y-j,u=a*a*(3-2*a),v=b*b*(3-2*b);return hs(i,j)*(1-u)*(1-v)+hs(i+1,j)*u*(1-v)+hs(i,j+1)*(1-u)*v+hs(i+1,j+1)*u*v}
@@ -641,7 +642,6 @@ else if(k==='chop'){nz(.1,500,.45,1);tone(110,.15,'sine',.4,70)}else if(k==='bre
 else if(k==='disc'){[523,659,784,1047].forEach((f,i)=>tone(f,1.4,'sine',.16,0,i*.13))}}
 // ---------- Chez Ruins event ----------
 let chezTriggered=false, chezPhase=0, chezT=0, chezBurgerRef=null, skyBurgerMesh=null;
-const chezUniform={value:0};
 const shakeObj={v:0};
 function mkSkyBurger(){
   const parts=[];
