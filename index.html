@@ -98,22 +98,25 @@ function islandTopAt(d){
   const t=(d-LH_R_TOP)/(LH_R_SEA-LH_R_TOP);
   return LH_H_TOP*(1-t);
 }
-function islandLiftFor(x,z){
+function islandDeltaAt(base,x,z){
+  // Returns how much the terrain should rise to meet an island at (x,z).
+  // Never lowers terrain, never touches terrain that's already above the island.
   if(typeof lhPool==='undefined'||!lhPool.length)return 0;
   let best=0;
   for(const L of lhPool){
     const dx=x-L.position.x, dz=z-L.position.z;
     const d2=dx*dx+dz*dz;
     if(d2>=LH_R_SEA*LH_R_SEA)continue;
-    const t=islandTopAt(Math.sqrt(d2));
-    if(t>best)best=t;
+    const d=Math.sqrt(d2);
+    const target=islandTopAt(d);
+    const delta=target-base;
+    if(delta>best)best=delta;
   }
   return best;
 }
 const H=(x,z)=>{const h=BH(x,z),c=cave(x,z);
 const base=(!c||c.t)?h:h+(Math.min(h,c.f)-h)*(1-ss(3,9,Math.hypot(x-c.x,z-c.z)));
-const lift=islandLiftFor(x,z);
-return base>lift?base:lift};
+return base+islandDeltaAt(base,x,z)};
 const NZ=`float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1,0)),f.x),mix(hs(i+vec2(0,1)),hs(i+vec2(1)),f.x),f.y);}
 float fb(vec2 p){float s=0.,a=.5;for(int k=0;k<3;k++){s+=a*vn(p);p=p*2.03+7.;a*=.5;}return s;}`;
