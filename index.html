@@ -1048,7 +1048,7 @@ if(myKo>0){ myKo=Math.max(0, myKo-dt); if(myKo===0) hud('back up'); }
 
 let ix=Math.max(-1,Math.min(1,mv.x+(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)));
 let iy=Math.max(-1,Math.min(1,mv.y+(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)));
-const sy=Math.sin(ya),cy=Math.cos(ya),g=H(P.x,P.z),swim=g<-1,k=Math.min(1,dt*(swim?4:10));
+const sy=Math.sin(ya),cy=Math.cos(ya),g=H(P.x,P.z),swim=inBoat?false:(g<-1),k=Math.min(1,dt*(swim?4:10));
 
 if(myKo>0){
   P.v.y-=18*dt; P.y+=P.v.y*dt;
