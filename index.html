@@ -204,8 +204,6 @@ cl(0,5.3,0,1.5,.7);cl(0,4,0,1.4,.2);return mergeParts(parts)})();
 const lighthouseG=(()=>{
   const parts=[],white=[.94,.94,.92],red=[.78,.20,.16],roof=[.22,.24,.30],glass=[1.0,.86,.42],rock=[.42,.40,.36],sand=[.72,.66,.48];
   const M4r=a=>new M4().makeRotationY(a);
-  // ---- island: underwater cone, y=-8 (r=0) up to y=0 (r=18) ----
-  parts.push([new T.CylinderGeometry(18,0.01,8,32,1,false).translate(0,-4,0),new M4(),rock,.35,(x,y,z)=>.65+.35*hs(x*3.1,z*3.1)]);
   // ---- island: above-water cone, y=0 (r=18) up to y=+4 (r=4) ----
   parts.push([new T.CylinderGeometry(4,18,4,32,1,false).translate(0,2,0),new M4(),sand,.30,(x,y,z)=>.72+.28*hs(x*4.7,z*4.7)]);
   // ---- island top plateau disc (r=4) at y=+4 ----
