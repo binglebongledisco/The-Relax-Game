@@ -89,21 +89,27 @@ function cave(x,z){const ix=Math.floor(x/CL),iz=Math.floor(z/CL),k=(ix+4096)*819
 if(c===undefined){c=null;const cx=(ix+.5+(hs(ix+SX,iz*3.1)-.5)*.36)*CL,cz=(iz+.5+(hs(ix*2.3,iz+SZ)-.5)*.36)*CL,h=BH(cx,cz),u=hs(ix+9.1,iz+SZ);
 if(u<.8){const t=u<.4&&h>6?0:u<.5?1:u<.6?2:u<.7?3:4,sl=Math.hypot(BH(cx+6,cz)-h,BH(cx,cz+6)-h);
 if(h>(t?3:6)&&h<40&&sl<(t?2.6:4.2))c={t,x:cx,z:cz,y:h,f:h-5,id:ix+','+iz+SEED,u:hs(ix*7,iz*3+SX)}}CV.set(k,c)}return c}
-function islandLift(x,z){
-  if(typeof lhPool==='undefined'||!lhPool.length)return 0;
-  let lift=0;
+function islandOverride(x,z){
+  if(typeof lhPool==='undefined'||!lhPool.length)return null;
+  let best=null;
   for(const L of lhPool){
     const dx=x-L.position.x, dz=z-L.position.z;
     const d2=dx*dx+dz*dz;
-    if(d2>=256)continue;                 // 16u radius
+    if(d2>=400)continue;                 // 20u outer radius
     const d=Math.sqrt(d2);
-    const t=1-ss(6.4,16,d);              // fade from full at 6.4u to zero at 16u
-    const peak=4.0-L.position.y;         // want island top at y=+4 in world
-    if(peak>0)lift=Math.max(lift,peak*t);
+    // island profile: top +5 at center, dips to -3 at radius 16, flat water beyond
+    const top=5.0-(d/16)*8.0;
+    // blend weight: 1 inside r=8, fades to 0 at r=20
+    const w=1-ss(8,20,d);
+    if(!best||w>best.w)best={y:top,w:w};
   }
-  return lift;
+  return best;
 }
-const H=(x,z)=>{const h=BH(x,z),c=cave(x,z);const base=(!c||c.t)?h:h+(Math.min(h,c.f)-h)*(1-ss(3,9,Math.hypot(x-c.x,z-c.z)));return base+islandLift(x,z)};
+const H=(x,z)=>{const h=BH(x,z),c=cave(x,z);
+const base=(!c||c.t)?h:h+(Math.min(h,c.f)-h)*(1-ss(3,9,Math.hypot(x-c.x,z-c.z)));
+const isl=islandOverride(x,z);
+if(isl)return base*(1-isl.w)+isl.y*isl.w;
+return base};
 const NZ=`float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1,0)),f.x),mix(hs(i+vec2(0,1)),hs(i+vec2(1)),f.x),f.y);}
 float fb(vec2 p){float s=0.,a=.5;for(int k=0;k<3;k++){s+=a*vn(p);p=p*2.03+7.;a*=.5;}return s;}`;
@@ -241,6 +247,16 @@ function trySpawnLighthouse(ox,oz){
     const dx=L.position.x-cx,dz=L.position.z-cz;
     if(dx*dx+dz*dz<3600)return;
   }
+  // must be at or near sea level so the island rises out of the water
+  const centerH=BH(cx,cz);
+  if(centerH>2.0)return;
+  // require water nearby: 6 of 8 samples at radius 20 must be below 0
+  let wet=0;
+  for(let k=0;k<8;k++){
+    const a=k*.7854;
+    if(BH(cx+Math.cos(a)*20, cz+Math.sin(a)*20)<0)wet++;
+  }
+  if(wet<6)return;
   // ---- build the lighthouse group ----
   // anchor group at y=0; the island base mesh (local y ~2.8..6.4) plus
   // the H() terrain lift (peak +4) meet at the base.
