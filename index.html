@@ -1657,6 +1657,32 @@ function despawnDino(){
   if(dino&&dino.root){scene.remove(dino.root);dino.root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()})}
   dino=null;
 }
+function dinoLandOK(x,z){
+  // Reject small islands: sample rings at multiple radii, count how much is land
+  let land=0,total=0;
+  for(const rr of [10,18,26,34]){
+    for(let a=0;a<8;a++){
+      const an=a*(6.2832/8);
+      const sx=x+Math.cos(an)*rr,sz=z+Math.sin(an)*rr;
+      total++;
+      if(H(sx,sz)>-0.35)land++;
+    }
+  }
+  if(land/total<0.5)return false;
+  // Also require a mostly-dry corridor back toward the player
+  const dx=P.x-x,dz=P.z-z,d=Math.hypot(dx,dz);
+  if(d>4){
+    let cl=0,ct=0;
+    const step=Math.max(4,d/12);
+    for(let t=step;t<d;t+=step){
+      const u=t/d,sx=x+dx*u,sz=z+dz*u;
+      ct++;
+      if(H(sx,sz)>-0.35)cl++;
+    }
+    if(ct>0&&cl/ct<0.6)return false;
+  }
+  return true;
+}
 function spawnDino(){
   despawnDino();
   let best=null;
@@ -1668,11 +1694,12 @@ function spawnDino(){
     if(h<0.6||h>22)continue;
     if(slope(x,z,h)>0.7)continue;
     if(inPit(x,z))continue;
+    if(!dinoLandOK(x,z))continue;
     best={x,z,h};break;
   }
   if(!best){outer:for(let rr=30;rr<=70;rr+=4){for(let an=0;an<6.283;an+=0.4){
     const x=P.x+Math.cos(an)*rr,z=P.z+Math.sin(an)*rr,h=H(x,z);
-    if(h>0.6&&h<22&&slope(x,z,h)<0.7&&!inPit(x,z)){best={x,z,h};break outer}
+    if(h>0.6&&h<22&&slope(x,z,h)<0.7&&!inPit(x,z)&&dinoLandOK(x,z)){best={x,z,h};break outer}
   }}}
   if(!best)return;
   const g=mkDino();
@@ -1729,7 +1756,8 @@ function dinoHit(r){
   sfx('thud',1);shake(0.3);
   const dx=dino.position.x-r.position.x,dz=dino.position.z-r.position.z;
   const d=Math.hypot(dx,dz)||1;
-  dino.position.x+=dx/d*0.6;dino.position.z+=dz/d*0.6;
+  const kx=dino.position.x+dx/d*0.6,kz=dino.position.z+dz/d*0.6;
+  if(H(kx,kz)>-0.35){dino.position.x=kx;dino.position.z=kz}
   const wasStunned=dino.state==='stun';
   dino.state='stun';dino.stunT=2.5;
   if(wasStunned&&!dino.angry){dino.angry=true;addMsg('\u2726','the dinosaur is ENRAGED',1.0);sfx('ko');shake(0.7)}
@@ -1797,7 +1825,16 @@ function dinoTick(dt){
     dino.root.position.copy(dino.position);dino.root.rotation.y=dino.heading;
     animDino(dt);return;
   } else if(dino.state==='flee'){
-    tX=dino.position.x+(dino.position.x-P.x);tZ=dino.position.z+(dino.position.z-P.z);speed=9;
+    const awayH=Math.atan2(dino.position.x-P.x,dino.position.z-P.z);
+    let fleeH=awayH,found=false;
+    for(let off=0;off<=2.0&&!found;off+=0.4){
+      for(const s of [1,-1]){
+        const ah=awayH+off*s;
+        const fx=dino.position.x+Math.sin(ah)*12,fz=dino.position.z+Math.cos(ah)*12;
+        if(H(fx,fz)>-0.35){fleeH=ah;found=true;break}
+      }
+    }
+    tX=dino.position.x+Math.sin(fleeH)*20;tZ=dino.position.z+Math.cos(fleeH)*20;speed=9;
     if(dist>60){despawnDino();return}
   }
   dino.spd=speed;
