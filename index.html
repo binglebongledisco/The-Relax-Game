@@ -1167,6 +1167,7 @@ function netErrMsg(e,n){const t=String((e&&(e.type||e.message))||'error');const 
 function returnHome(title,msg,kind){
   netTok++;try{if(rm){rm.leave()}}catch(e){}
   rm=null;rn='';inGame=false;mutedByHost=false;lastPlayerList=[];
+  despawnDino();
   boatAuthority=null;inBoat=false;mySeat=-1;boat.occupants=[null,null];
   for(const k in rem){try{scene.remove(rem[k].root)}catch(e){}delete rem[k]}
   document.body.classList.remove('ig');
@@ -1560,6 +1561,9 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
         break;
       }
     }}r.rotation.x+=u.v.length()*dt*.4;r.rotation.z+=u.v.x*dt*.3;
+    if(dino&&dino.alive){const ddx=r.position.x-dino.position.x,ddz=r.position.z-dino.position.z;
+      const ddy=r.position.y-(dino.position.y+1.5);
+      if(ddx*ddx+ddz*ddz<6.25&&Math.abs(ddy)<2.5){dinoHit(r);u.v.multiplyScalar(0.3)}}
     if(u.thrownBy && u.thrownBy!=='me' && myKo<=0 && rm && u.thrownBy!==rm.id){const dx=r.position.x-P.x,dy=r.position.y-(P.y+1.0),dz=r.position.z-P.z;
       if(dx*dx+dy*dy+dz*dz<1.2){myKo=2.0;sfx('ko');shake(.8);if(rm)rm.emit('hit',{by:u.thrownBy});addMsg('·','You were knocked over by '+nameOf(u.thrownBy)+'!',.02);u.v.multiplyScalar(0.3)}}
     // SKIP: rock skipping logic - replaces the old splash-on-water check
@@ -1595,15 +1599,232 @@ const t=U.uT.value;for(let i=0;i<NB;i++){const a=t*(.12+.02*(i%5))*(i%2?1:-1)+i*
 birds.instanceMatrix.needsUpdate=true;
 for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t*.8+i)*.5;mp[j+1]=P.y+.3+((i*.137+t*.04)%1)*8;mp[j+2]=P.z+Math.cos(i*7.7+t*.06)*15+Math.cos(t*.9+i)*.5}mg.attributes.position.needsUpdate=true;motes.visible=!uw;
 {const ic=inCave();sun.intensity+=((((ic?.35:1.1))*(1-skyBlack))-sun.intensity)*Math.min(1,dt*3)}
-poiTick(dt,t);if(fr%6===0)mixAudio(uw);
+poiTick(dt,t);if(inGame)dinoTick(dt);if(fr%6===0)mixAudio(uw);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
 $('ebt').style.display=(held&&held.u.kind===6&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
 else{$('gb').style.transform=''}
 if(trauma>0){trauma=Math.max(0,trauma-dt*1.4);const s=trauma*trauma,q=t*28;cam.rotation.x+=(vn(q,3.1)-.5)*.1*s;cam.rotation.y+=(vn(q,7.7)-.5)*.1*s;cam.rotation.z+=(vn(q,11.3)-.5)*.16*s;cam.position.x+=(vn(q,1.9)-.5)*.18*s;cam.position.y+=(vn(q,5.3)-.5)*.18*s}
 rd.render(scene,cam);reflectPass(uw)}
+
+// ============================================================
+//  DINO NPC
+// ============================================================
+let dino=null;
+function wrapAngle(a){return Math.atan2(Math.sin(a),Math.cos(a))}
+function mkDino(){
+  const g=new T.Group();
+  const body=new T.MeshPhongMaterial({color:0x4a6a3a,shininess:22,specular:0x222222});
+  const belly=new T.MeshPhongMaterial({color:0x7a9a5a,shininess:15});
+  const teeth=new T.MeshPhongMaterial({color:0xf5f0e0,shininess:70});
+  const eyeW=new T.MeshPhongMaterial({color:0xffffff});
+  const eyeR=new T.MeshPhongMaterial({color:0xd02020,emissive:0x801010,emissiveIntensity:.55});
+  const core=new T.Mesh(new T.BoxGeometry(2.6,2.8,5),body);core.position.y=3.4;g.add(core);
+  const bp=new T.Mesh(new T.BoxGeometry(2,1.6,4.5),belly);bp.position.set(0,3.0,0.2);g.add(bp);
+  const tail=[];
+  for(const[p1,p2,p3,w,h,d]of [[0,3.2,-3.5,2.4,1.8,1.6],[0,2.9,-5.2,1.9,1.4,1.4],[0,2.5,-6.6,1.4,1.0,1.2],[0,2.0,-7.8,0.9,0.7,1.0]]){
+    const t=new T.Mesh(new T.BoxGeometry(w,h,d),body);t.position.set(p1,p2,p3);g.add(t);tail.push(t);
+  }
+  const neck1=new T.Mesh(new T.BoxGeometry(1.6,1.8,1.6),body);neck1.position.set(0,4.6,1.8);g.add(neck1);
+  const neck2=new T.Mesh(new T.BoxGeometry(1.4,1.6,1.4),body);neck2.position.set(0,5.8,2.8);g.add(neck2);
+  const hd=new T.Group();hd.position.set(0,6.8,3.4);g.add(hd);
+  const head=new T.Mesh(new T.BoxGeometry(1.8,1.8,2.2),body);hd.add(head);
+  const snout=new T.Mesh(new T.BoxGeometry(1.4,1.1,1.8),body);snout.position.set(0,-0.2,1.8);hd.add(snout);
+  const jaw=new T.Group();jaw.position.set(0,-0.6,0.6);hd.add(jaw);
+  const jawM=new T.Mesh(new T.BoxGeometry(1.3,0.35,1.6),body);jawM.position.z=1.2;jaw.add(jawM);
+  for(const tx of [-0.4,0,0.4]){const t=new T.Mesh(new T.BoxGeometry(0.12,0.3,0.12),teeth);t.position.set(tx,-0.35,2.6);hd.add(t)}
+  for(const tx of [-0.35,0,0.35]){const t=new T.Mesh(new T.BoxGeometry(0.12,0.25,0.12),teeth);t.position.set(tx,0.15,2.2);jaw.add(t)}
+  const eL=new T.Mesh(new T.SphereGeometry(0.24,10,8),eyeW);eL.position.set(-0.55,0.35,1.2);hd.add(eL);
+  const eR=new T.Mesh(new T.SphereGeometry(0.24,10,8),eyeW);eR.position.set(0.55,0.35,1.2);hd.add(eR);
+  const pL=new T.Mesh(new T.SphereGeometry(0.13,8,6),eyeR);pL.position.set(-0.6,0.35,1.42);hd.add(pL);
+  const pR=new T.Mesh(new T.SphereGeometry(0.13,8,6),eyeR);pR.position.set(0.6,0.35,1.42);hd.add(pR);
+  const legs=[];
+  for(const sd of [-1,1]){
+    const thigh=new T.Mesh(new T.BoxGeometry(0.9,2,1.2),body);thigh.position.set(sd*1.1,2.2,0.5);g.add(thigh);
+    const shin=new T.Mesh(new T.BoxGeometry(0.7,1.8,0.9),body);shin.position.set(sd*1.1,0.4,0.8);g.add(shin);
+    const foot=new T.Mesh(new T.BoxGeometry(1.1,0.4,1.6),body);foot.position.set(sd*1.1,-0.6,1.0);g.add(foot);
+    legs.push({thigh,shin,foot,sd});
+  }
+  for(const sd of [-1,1]){
+    const arm=new T.Mesh(new T.BoxGeometry(0.4,0.7,0.4),body);arm.position.set(sd*1.3,3.9,2.2);g.add(arm);
+  }
+  g.traverse(o=>{if(o.isMesh)o.castShadow=true});
+  g.scale.setScalar(0.55);
+  g.userData={head:hd,jaw,tail,legs,eyeR};
+  return g;
+}
+function despawnDino(){
+  if(dino&&dino.root){scene.remove(dino.root);dino.root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()})}
+  dino=null;
+}
+function spawnDino(){
+  despawnDino();
+  let best=null;
+  for(let a=0;a<80;a++){
+    const an=Math.random()*6.283;
+    const r=38+Math.random()*22;
+    const x=P.x+Math.cos(an)*r,z=P.z+Math.sin(an)*r;
+    const h=H(x,z);
+    if(h<0.6||h>22)continue;
+    if(slope(x,z,h)>0.7)continue;
+    if(inPit(x,z))continue;
+    best={x,z,h};break;
+  }
+  if(!best){outer:for(let rr=30;rr<=70;rr+=4){for(let an=0;an<6.283;an+=0.4){
+    const x=P.x+Math.cos(an)*rr,z=P.z+Math.sin(an)*rr,h=H(x,z);
+    if(h>0.6&&h<22&&slope(x,z,h)<0.7&&!inPit(x,z)){best={x,z,h};break outer}
+  }}}
+  if(!best)return;
+  const g=mkDino();
+  g.position.set(best.x,best.h,best.z);
+  scene.add(g);
+  dino={root:g,position:new V3(best.x,best.h,best.z),heading:Math.random()*6.283,
+    state:'idle',angry:false,hits:0,stunT:0,alertT:0,recoverT:0,wanderT:0,
+    wanderTgt:{x:best.x,z:best.z},lastSeenX:0,lastSeenZ:0,lastSeenT:-999,spd:0,alive:true};
+  addMsg('\u2726','a dinosaur roams nearby...',.15);
+}
+function dinoCanSee(){
+  if(!dino)return false;
+  const dx=P.x-dino.position.x,dz=P.z-dino.position.z;
+  const d2=dx*dx+dz*dz;
+  const range=dino.angry?32:20;
+  if(d2>range*range)return false;
+  const d=Math.sqrt(d2)||1;
+  const fx=Math.sin(dino.heading),fz=Math.cos(dino.heading);
+  const dot=(dx*fx+dz*fz)/d;
+  const halfCos=dino.angry?0.2:0.5;
+  if(dot<halfCos)return false;
+  const eyeY=dino.position.y+2.2,py=P.y+1;
+  for(let i=1;i<6;i++){
+    const t=i/6;
+    const sx=dino.position.x+dx*t,sz=dino.position.z+dz*t;
+    const sy=eyeY+(py-eyeY)*t;
+    if(H(sx,sz)>sy+0.3)return false;
+  }
+  return true;
+}
+function dinoNoise(){
+  if(!inGame||myKo>0)return 0;
+  const spd=Math.hypot(P.v.x,P.v.z);
+  if(inBoat&&Math.abs(boat.speed)>2)return 14;
+  if(spd<0.15)return 0;
+  let n=spd*3;
+  if(running)n+=5;
+  if(H(P.x,P.z)<-0.5)n*=0.5;
+  return n;
+}
+function attackPlayer(){
+  if(myKo>0)return;
+  myKo=2.0;
+  sfx('ko');shake(0.9);
+  const dx=P.x-dino.position.x,dz=P.z-dino.position.z;
+  const d=Math.hypot(dx,dz)||1;
+  P.v.x+=dx/d*8;P.v.y=6;P.v.z+=dz/d*8;
+  addMsg('\u00b7','The dinosaur knocked you over!',.02);
+  if(rm)rm.emit('chat',{t:'\u2726 the dinosaur knocked '+ (uname||'someone') +' over',h:.02,n:''});
+}
+function dinoHit(r){
+  if(!dino||!dino.alive)return;
+  dino.hits++;
+  sfx('thud',1);shake(0.3);
+  const dx=dino.position.x-r.position.x,dz=dino.position.z-r.position.z;
+  const d=Math.hypot(dx,dz)||1;
+  dino.position.x+=dx/d*0.6;dino.position.z+=dz/d*0.6;
+  const wasStunned=dino.state==='stun';
+  dino.state='stun';dino.stunT=2.5;
+  if(wasStunned&&!dino.angry){dino.angry=true;addMsg('\u2726','the dinosaur is ENRAGED',1.0);sfx('ko');shake(0.7)}
+  if(dino.hits>=6){dino.state='flee';addMsg('\u2726','the dinosaur flees!',0.9)}
+  hud('dino hit '+dino.hits+'/6');
+}
+function animDino(dt,stunned){
+  if(!dino)return;
+  const u=dino.root.userData,t=U.uT.value,spd=dino.spd||0;
+  const walkT=spd>0.1?t*spd*1.4:t*0.6;
+  for(const L of u.legs){
+    const phase=L.sd>0?0:Math.PI;
+    const sw=Math.sin(walkT+phase)*Math.min(0.6,spd*0.09);
+    L.thigh.position.z=0.5+sw*0.5;
+    L.shin.position.z=0.8+sw*0.3;
+    L.foot.position.z=1.0+sw*0.6;
+    L.foot.position.y=-0.6+Math.max(0,sw)*0.35;
+  }
+  for(let i=0;i<u.tail.length;i++){u.tail[i].rotation.y=Math.sin(walkT*0.8+i*0.3)*0.15*(1+i*0.15)}
+  u.head.rotation.x=Math.sin(t*1.2)*0.05+(stunned?-0.5:0);
+  u.head.rotation.y=stunned?Math.sin(t*3)*0.15:0;
+  const chasing=dino.state==='chase'||dino.state==='flee';
+  const jawOpen=chasing?0.45+0.35*Math.sin(t*7):0.05+Math.max(0,Math.sin(t*1.5))*0.1;
+  u.jaw.rotation.x=-jawOpen;
+  u.eyeR.emissiveIntensity=dino.angry?1.1:0.55;
+}
+function dinoTick(dt){
+  if(!dino||!dino.alive)return;
+  const dx=P.x-dino.position.x,dz=P.z-dino.position.z;
+  const dist=Math.hypot(dx,dz);
+  const distY=Math.abs(P.y-dino.position.y);
+  if(dino.state==='stun'){
+    dino.stunT-=dt;
+    dino.spd=0;
+    dino.heading+=dt*0.4;
+    if(dino.stunT<=0)dino.state='chase';
+    dino.root.position.copy(dino.position);dino.root.rotation.y=dino.heading;
+    animDino(dt,true);return;
+  }
+  const seen=dinoCanSee();
+  const noise=dinoNoise();
+  const heard=noise>0&&dist<noise;
+  if(seen){
+    dino.lastSeenX=P.x;dino.lastSeenZ=P.z;dino.lastSeenT=U.uT.value;
+    if(dino.state!=='chase'&&dino.state!=='recover'&&dino.state!=='flee')dino.state='chase';
+  } else if(heard&&dino.state==='idle'){
+    dino.state='alert';dino.alertT=0;dino.lastSeenX=P.x;dino.lastSeenZ=P.z;
+  }
+  let tX=null,tZ=null,speed=0;
+  if(dino.state==='idle'){
+    if(dino.wanderT<=0){dino.wanderT=2+Math.random()*4;dino.wanderTgt={x:dino.position.x+(Math.random()-0.5)*20,z:dino.position.z+(Math.random()-0.5)*20}}
+    dino.wanderT-=dt;tX=dino.wanderTgt.x;tZ=dino.wanderTgt.z;speed=1.4;
+  } else if(dino.state==='alert'){
+    dino.alertT+=dt;speed=0;
+    const ax=dino.lastSeenX-dino.position.x,az=dino.lastSeenZ-dino.position.z;
+    dino.heading+=wrapAngle(Math.atan2(ax,az)-dino.heading)*Math.min(1,dt*3);
+    if(dino.alertT>2.5)dino.state=heard?'chase':'idle';
+  } else if(dino.state==='chase'){
+    tX=dino.lastSeenX;tZ=dino.lastSeenZ;speed=dino.angry?8:6;
+    if(dist<2.5&&distY<2.5&&myKo<=0){attackPlayer();dino.state='recover';dino.recoverT=4}
+    if(!seen&&U.uT.value-dino.lastSeenT>5)dino.state='idle';
+  } else if(dino.state==='recover'){
+    dino.recoverT-=dt;dino.spd=0;
+    if(dino.recoverT<=0)dino.state='chase';
+    dino.root.position.copy(dino.position);dino.root.rotation.y=dino.heading;
+    animDino(dt);return;
+  } else if(dino.state==='flee'){
+    tX=dino.position.x+(dino.position.x-P.x);tZ=dino.position.z+(dino.position.z-P.z);speed=9;
+    if(dist>60){despawnDino();return}
+  }
+  dino.spd=speed;
+  if(speed>0&&tX!==null){
+    const tdx=tX-dino.position.x,tdz=tZ-dino.position.z;
+    const tHead=Math.atan2(tdx,tdz);
+    dino.heading+=wrapAngle(tHead-dino.heading)*Math.min(1,dt*3);
+    const nx=dino.position.x+Math.sin(dino.heading)*speed*dt;
+    const nz=dino.position.z+Math.cos(dino.heading)*speed*dt;
+    if(H(nx,nz)>-0.35){dino.position.x=nx;dino.position.z=nz}
+    else{for(const a of [0.6,-0.6,1.2,-1.2,2.0,-2.0]){
+      const h2=dino.heading+a;
+      const nx2=dino.position.x+Math.sin(h2)*speed*dt;
+      const nz2=dino.position.z+Math.cos(h2)*speed*dt;
+      if(H(nx2,nz2)>-0.35){dino.position.x=nx2;dino.position.z=nz2;dino.heading=h2;break}
+    }}
+    dino.position.y=H(dino.position.x,dino.position.z);
+  }
+  const bob=Math.abs(Math.sin(U.uT.value*(speed>0.1?speed*1.4:0.6)))*0.06*(speed*0.2+0.3);
+  dino.root.position.set(dino.position.x,dino.position.y+bob,dino.position.z);
+  dino.root.rotation.y=dino.heading;
+  animDino(dt);
+}
+
 function spawnAllPads(){
   padReady=true;
+  spawnDino();
   for(const c of pool)if(c.cx!==1e9)trySpawnPad(c.cx*CS,c.cz*CS);
   (function spawnDebugPad(){const px=P.x, pz=P.z-6, py=H(px,pz);const g=new T.Group();g.position.set(px,py+.25,pz);
   {const e=.7;const nx=H(px-e,pz)-H(px+e,pz);const nz=H(px,pz-e)-H(px,pz+e);
