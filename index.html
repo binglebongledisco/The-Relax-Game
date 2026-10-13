@@ -14,6 +14,7 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 #lb{display:none;right:max(14px,env(safe-area-inset-right));bottom:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px);font-size:clamp(10px,1.6vmin,13px)}
 #rb{display:none;right:calc(max(14px,env(safe-area-inset-right)) + clamp(84px,15vmin,108px));bottom:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px);font-size:clamp(10px,1.6vmin,13px);background:radial-gradient(circle at 35% 30%,#7ecc85,#1f9b1f);color:#0b3a0b;font-weight:900}
 #rb.on{background:radial-gradient(circle at 35% 30%,#eec06a,#d97a2a);color:#3a1160}
+#ebt{display:none;right:max(14px,env(safe-area-inset-right));bottom:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px);font-size:clamp(10px,1.6vmin,13px);background:radial-gradient(circle at 35% 30%,#ffd76a,#d97a2a);color:#3a1160;font-weight:900}
 #st{display:none;position:fixed;left:max(8px,env(safe-area-inset-left));top:max(8px,env(safe-area-inset-top));color:#fff;font:600 11px system-ui;text-shadow:0 1px 4px #000a;background:#0009;padding:5px 10px;border-radius:12px;max-width:260px;line-height:1.3;z-index:8;pointer-events:none;white-space:pre-line;border:1px solid #ffffff22;opacity:.94}
 #eb{display:none;position:fixed;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));flex-direction:row;gap:clamp(3px,.6vmin,5px);align-items:center;background:#0007;padding:clamp(4px,.8vmin,6px);border-radius:24px;border:1px solid #fff4;z-index:4}
 #eb i{font-style:normal;display:flex;align-items:center;justify-content:center;width:clamp(32px,5.4vmin,42px);height:clamp(32px,5.4vmin,42px);background:#ffffff15;border:1px solid #fff5;border-radius:50%;font-size:clamp(15px,2.8vmin,20px);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:background .15s,border-color .15s;line-height:1}
@@ -154,7 +155,7 @@ body.ig::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:2;b
 </style></head><body>
 <canvas id="c"></canvas><div id="ov"></div>
 <div id="jr"><div id="jk"></div></div>
-<button id="jb">Up</button><button id="gb">Grab</button><button id="lb">Leave boat</button><button id="rb">Run</button>
+<button id="jb">Up</button><button id="gb">Grab</button><button id="lb">Leave boat</button><button id="rb">Run</button><button id="ebt">Eat</button>
 <div id="hint">Left thumb walks, right thumb looks. Tap Run to toggle walking and running. Grab rocks, crystals, ducks, beach balls and mushrooms; hold to charge, release to throw. Throw rocks flat and fast across water to skip them. Stand next to a friend and press Grab to pull them around. Wade into a pond and look down to dive. Walk into caves and ruins to discover them — glowing ore nodes are embedded in the walls. Two people can ride the boat — walk up to a seat. Press R for ragdoll.</div>
 <div id="home">
   <div class="hc">
@@ -594,7 +595,7 @@ function leaveBoat(){if(!inBoat)return;
   const rx=Math.cos(ya),rz=-Math.sin(ya);P.x+=rx*4.2;P.z+=rz*4.2;const gg=H(P.x,P.z);P.y=Math.max(gg,0.05);P.v.set(0,4,0);
   const lb=document.getElementById('lb');if(lb)lb.style.display='none'}
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
-const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null;
+const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1,eatChomped=0;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
 // SKIP: place() now also resets skip counter when a rock is (re)spawned
 function place(m){const a=sRng()*6.283,r=8+sRng()*48,x=P.x+Math.cos(a)*r,z=P.z+Math.sin(a)*r;m.position.set(x,H(x,z)+m.u.r*.5,z);m.u.rest=true;m.u.v.set(0,0,0);m.u.skip=0;if(m.u.fl&&m.position.y<0){m.position.y=0;m.u.rest=false}}
 // SKIP: add skip:0 to rock data
@@ -608,10 +609,11 @@ g.setAttribute('color',new T.Float32BufferAttribute(cl,3));m=new T.Mesh(g,PH(0xf
 else if(k==2){m=new T.Group();const cap=new T.Mesh(new T.SphereGeometry(.2,12,8,0,6.283,0,1.6),PH(0xc4322b,{side:T.DoubleSide})),sm=new T.Mesh(new T.CylinderGeometry(.05,.07,.2,8),PH(0xeee3cc));cap.position.y=.1;m.add(cap,sm);b=.15}
 else if(k==3){m=new T.Mesh(new T.SphereGeometry(.22,14,10).scale(1,.92,1),PH(0xc2271f,{shininess:140}));r=.22;b=.5}
 else if(k==4){const c=hue();m=new T.Mesh(new T.SphereGeometry(.16,10,8),new T.MeshBasicMaterial({color:c}));m.add(new T.Mesh(new T.SphereGeometry(.3,8,6),new T.MeshBasicMaterial({color:c,transparent:true,opacity:.15,blending:T.AdditiveBlending,depthWrite:false})));r=.2;b=.9}
+else if(k==6){m=new T.Group();const bB=new T.Mesh(new T.CylinderGeometry(.24,.24,.10,14),PH(0xe0a03a,{shininess:22})),pt2=new T.Mesh(new T.CylinderGeometry(.24,.24,.09,14),PH(0x5a3520,{shininess:8})),bT=new T.Mesh(new T.SphereGeometry(.24,14,8,0,6.283,0,Math.PI/2),PH(0xe0a03a,{shininess:22}));bB.position.y=-.055;pt2.position.y=.045;bT.position.y=.09;m.add(bB,pt2,bT);r=.28;b=.4;fl=0}
 else{m=new T.Group();const y=PH(0xffd21f,{shininess:120}),bd=new T.Mesh(new T.SphereGeometry(.22,12,8).scale(1,.8,1.3),y),hd=new T.Mesh(new T.SphereGeometry(.13,10,8),y),bk=new T.Mesh(new T.ConeGeometry(.05,.1,6).rotateX(1.5708),PH(0xff7a1a));hd.position.set(0,.2,.17);bk.position.set(0,.19,.3);m.add(bd,hd,bk);r=.25;fl=1}
 // SKIP: add skip:0 to item data
 m.traverse(o=>o.castShadow=true);m.u={r,b,fl,kind:k,v:new V3(),rest:true,held:false,remoteHeld:null,idx:rocks.length,skip:0};place(m);rocks.push(m);scene.add(m)}
-for(let i=0;i<48;i++)mkItem(i%6);
+for(let i=0;i<48;i++)mkItem(i%6);for(let i=0;i<10;i++)mkItem(6);
 const rings=[...Array(5)].map(()=>{const m=new T.Mesh(new T.RingGeometry(.3,.4,24).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false,opacity:.6}));m.visible=false;m.t=9;scene.add(m);return m});let ri=0;
 function splash(x,z){sfx('splash');ripple(x,z,1.3);{const d=Math.hypot(x-P.x,z-P.z);if(d<12)shake(.12*(1-d/12))}const r=rings[ri++%5];r.position.set(x,.06,z);r.t=0;r.visible=true;r.material.color.setHex(0xffffff)}
 // SKIP: new skipFx for visual/audio feedback on each bounce
@@ -775,7 +777,8 @@ else if(k==='ko'){tone(120,.6,'sine',.55,40);sweep(900,150,.4,.4,.8);tone(880,1,
 else if(k==='click'){tone(2200,.03,'square',.1);tone(1400,.035,'square',.09,0,.05)}
 else if(k==='thud'){tone(90,.2,'sine',.5*t,42);nz(.12,450,.3*t,.7)}
 else if(k==='launch'){sweep(200,1800,.25,.4,1.1);tone(880,.25,'sine',.22,220,.02);tone(220,.4,'triangle',.3,110,.05)}
-else if(k==='boing')tone(180,.35,'sine',.3,720);else return 0;return 1}
+else if(k==='eat'){nz(.07,700,.35,1.6);tone(190,.1,'sine',.22,80,.03);setTimeout(()=>nz(.07,500,.3,1.6),110)}
+else if(k==='chomp'){const t0=ac.currentTime;const s=ac.createBufferSource();s.buffer=nb;const f=ac.createBiquadFilter();f.type='lowpass';f.Q.value=1.1;f.frequency.setValueAtTime(1600,t0);f.frequency.exponentialRampToValueAtTime(280,t0+.13);const g=ac.createGain();g.gain.setValueAtTime(.0001,t0);g.gain.linearRampToValueAtTime(.55,t0+.005);g.gain.exponentialRampToValueAtTime(.0001,t0+.16);s.connect(f);f.connect(g);g.connect(aG);s.start(t0,Math.random());s.stop(t0+.2);const o=ac.createOscillator(),og=ac.createGain();o.type='sine';o.frequency.setValueAtTime(180,t0);o.frequency.exponentialRampToValueAtTime(65,t0+.1);og.gain.setValueAtTime(.0001,t0);og.gain.linearRampToValueAtTime(.4,t0+.007);og.gain.exponentialRampToValueAtTime(.0001,t0+.14);o.connect(og);og.connect(aG);o.start(t0);o.stop(t0+.17);setTimeout(()=>{const t1=ac.currentTime;const s2=ac.createBufferSource();s2.buffer=nb;const f2=ac.createBiquadFilter();f2.type='bandpass';f2.frequency.value=550;f2.Q.value=1.4;const g2=ac.createGain();g2.gain.setValueAtTime(.0001,t1);g2.gain.linearRampToValueAtTime(.2,t1+.005);g2.gain.exponentialRampToValueAtTime(.0001,t1+.08);s2.connect(f2);f2.connect(g2);g2.connect(aG);s2.start(t1,Math.random());s2.stop(t1+.11);},50)}else if(k==='boing')tone(180,.35,'sine',.3,720);else return 0;return 1}
 function sfx(k,t){if(!ac)return;if(sfx2(k,t))return;if(k==='jump'){tone(340,.22,'sine',.18,720)}else if(k==='grab')tone(520,.12,'sine',.22,780);else if(k==='whoosh')nz(.3,900,.32,.6);else if(k==='splash')nz(.45,1500,.36,.5);
 else if(k==='orb'){tone(880,.25,'sine',.24);tone(1320,.35,'sine',.2,0,.08)}else if(k==='ko'){tone(140,.5,'sine',.5,50);nz(.3,300,.4,.7)}
 else if(k==='swing')nz(.18,1200,.22,.8);else if(k==='pick'){nz(.08,2600,.38,2);tone([700,900,1300,1800][t],.16,'triangle',.2)}
@@ -1149,7 +1152,7 @@ const keys={},mv={x:0,y:0};let joy=null,jo=[0,0],look=null,lx=0,ly=0,jump=false,
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='KeyE'&&!keys.KeyE)gt=performance.now();keys[e.code]=1;if(e.code==='Space')jump=true});
 addEventListener('keyup',e=>{keys[e.code]=0;if(e.target.tagName==='INPUT')return;if(e.code==='Space')jump=false;if(e.code==='KeyE')act()});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=0;jump=false});
-function act(){if(myKo>0)return;if(held)toss(Math.min((performance.now()-gt)/800,1));else if(dragging)stopDrag();else grab()}
+function act(){if(myKo>0)return;if(eatT>=0)return;if(held)toss(Math.min((performance.now()-gt)/800,1));else if(dragging)stopDrag();else grab()}
 $('gb').onpointerdown=e=>{e.preventDefault();gt=performance.now();try{$('gb').setPointerCapture(e.pointerId)}catch(_){}};
 $('gb').onpointerup=act;
 $('gb').onpointercancel=()=>{gt=0;$('gb').style.transform=''};
@@ -1157,6 +1160,7 @@ $('jb').onpointerdown=e=>{e.preventDefault();jump=true;try{$('jb').setPointerCap
 $('jb').onpointerup=$('jb').onpointercancel=()=>jump=false;
 $('lb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();leaveBoat()};
 $('rb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();toggleRun()};
+$('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(held&&held.u.kind===6&&eatT<0){eatT=0;eatChomped=0}};
 const downPtrs=new Set();
 function releasePtr(id){
   downPtrs.delete(id);
@@ -1298,7 +1302,7 @@ else{
 if((tp||emote>0)&&myKo<=0&&!pulledBy){cam.position.addScaledVector(fw,-3.4).addScaledVector(rt,.5);cam.position.y=Math.max(cam.position.y,H(cam.position.x,cam.position.z)+.4)}
 const uw=cam.position.y<0;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
 if(!uw)fogC.copy(FOG0);
-const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && !RG.on && (!!held||!!dragging);
+const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && !RG.on && (!!held||!!dragging||eatT>=0);
 handVis+=((wantHand?1:0)-handVis)*Math.min(1,dt*7);
 handR.visible=handVis>0.02;lhVis+=(((wantHand&&dragging)?1:0)-lhVis)*Math.min(1,dt*7);lhG.visible=handR.visible&&lhVis>.02;
 if(handR.visible){const e=handVis*handVis*(3-2*handVis);const idle=U.uT.value;const spdMag=Math.min(1,Math.hypot(P.v.x,P.v.z)/5.2);
@@ -1312,6 +1316,7 @@ holdK+=((held?1:0)-holdK)*Math.min(1,dt*9);handR.position.y+=holdK*.06;handR.rot
 lhG.position.set(-.36-breathX-walkBob,-.27+Math.sin(idle*1.2+1)*.007+Math.cos(bobT*2+1)*.018*spdMag*(1+runK*.5)+(1-lhVis*lhVis*(3-2*lhVis))*-.55+runK*.08,-.55+runK*.02-sw);
 lhG.rotation.set(-.25+Math.sin(idle*1.2+1)*.02-runK*.12+sw*2.2,-.1-Math.cos(idle*.8)*.015,-.15+walkBob*.8);
 dragK+=((dragging?1:0)-dragK)*Math.min(1,dt*8);{const tg=Math.sin(idle*5)*.03*dragK;handR.position.x-=dragK*.12;handR.position.z+=tg;handR.position.y+=dragK*.05;handR.rotation.y-=dragK*.15;lhG.position.x+=dragK*.12;lhG.position.z-=tg;lhG.position.y+=dragK*.05;lhG.rotation.y+=dragK*.15}
+if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.held=false;held.u.rest=true;held.u.v.set(0,0,0);held.position.set(P.x+9000,700,P.z+9000);held=null;$('gb').textContent='Grab'}if(eatT>=EAT_DUR)eatT=-1}
 if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompose(_hp,_hq,new T.Vector3());
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
@@ -1327,7 +1332,20 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
   if(!r.visible)r.visible=true;
   if(u.held){if(!handR.visible){me.haR.getWorldPosition(r.position);r.position.y-=.05}continue}
   if(!u.rest){const py=r.position.y,gg=H(r.position.x,r.position.z),inW=py<0&&gg<0;u.v.y-=(inW?(u.fl?-7:5):18)*dt;if(inW)u.v.multiplyScalar(1-2.5*dt);
-    {const nS=Math.min(8,Math.max(1,Math.ceil(u.v.length()*dt/.2))),sd=dt/nS;for(let z2=0;z2<nS;z2++){r.position.addScaledVector(u.v,sd);hitCol(r)}}r.rotation.x+=u.v.length()*dt*.4;r.rotation.z+=u.v.x*dt*.3;
+    {const nS=Math.min(8,Math.max(1,Math.ceil(u.v.length()*dt/.2))),sd=dt/nS;for(let z2=0;z2<nS;z2++){r.position.addScaledVector(u.v,sd);hitCol(r);
+      // TRAMP: items/rocks bounce off launch pads (checked every substep so fast movers can't skip)
+      if((u.padCd=Math.max(0,(u.padCd||0)-sd))<=0)for(const pad of padPool){
+        const qdx=r.position.x-pad.userData.cx,qdz=r.position.z-pad.userData.cz;
+        if(qdx*qdx+qdz*qdz>6.25)continue;
+        const qdy=r.position.y-pad.userData.cy;
+        if(qdy<-1.5||qdy>3)continue;
+        u.padCd=1.0;u.rest=false;u.skip=0;
+        const _pu=new T.Vector3(0,1,0).applyQuaternion(pad.quaternion);
+        u.v.x=u.v.x*.4+_pu.x*16;u.v.y=Math.max(3,_pu.y*20);u.v.z=u.v.z*.4+_pu.z*16;
+        sfx('launch');ripple(r.position.x,r.position.z,.6);
+        break;
+      }
+    }}r.rotation.x+=u.v.length()*dt*.4;r.rotation.z+=u.v.x*dt*.3;
     if(u.thrownBy && u.thrownBy!=='me' && myKo<=0 && rm && u.thrownBy!==rm.id){const dx=r.position.x-P.x,dy=r.position.y-(P.y+1.0),dz=r.position.z-P.z;
       if(dx*dx+dy*dy+dz*dz<1.2){myKo=2.0;sfx('ko');shake(.8);if(rm)rm.emit('hit',{by:u.thrownBy});addMsg('·','You were knocked over by '+nameOf(u.thrownBy)+'!',.02);u.v.multiplyScalar(0.3)}}
     // SKIP: rock skipping logic - replaces the old splash-on-water check
@@ -1362,6 +1380,7 @@ for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t
 {const ic=inCave();sun.intensity+=((ic?.35:1.1)-sun.intensity)*Math.min(1,dt*3)}
 poiTick(dt,t);if(fr%6===0)mixAudio(uw);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
+$('ebt').style.display=(held&&held.u.kind===6&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
 else{$('gb').style.transform=''}
 if(trauma>0){trauma=Math.max(0,trauma-dt*1.4);const s=trauma*trauma,q=t*28;cam.rotation.x+=(vn(q,3.1)-.5)*.1*s;cam.rotation.y+=(vn(q,7.7)-.5)*.1*s;cam.rotation.z+=(vn(q,11.3)-.5)*.16*s;cam.position.x+=(vn(q,1.9)-.5)*.18*s;cam.position.y+=(vn(q,5.3)-.5)*.18*s}
