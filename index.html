@@ -614,6 +614,36 @@ else{m=new T.Group();const y=PH(0xffd21f,{shininess:120}),bd=new T.Mesh(new T.Sp
 // SKIP: add skip:0 to item data
 m.traverse(o=>o.castShadow=true);m.u={r,b,fl,kind:k,v:new V3(),rest:true,held:false,remoteHeld:null,idx:rocks.length,skip:0};place(m);rocks.push(m);scene.add(m)}
 for(let i=0;i<48;i++)mkItem(i%6);for(let i=0;i<10;i++)mkItem(6);
+// BURGER MERGE: 4 resting small burgers close together become one mega burger
+let mergeT=0;
+function tryMergeBurgers(){
+  const bs=[];
+  for(const r of rocks)if(r.u.kind===6&&!r.u.big&&!r.u.held&&!r.u.remoteHeld&&r.u.rest)bs.push(r);
+  if(bs.length<4)return;
+  for(let i=0;i<bs.length;i++){
+    const near=[];
+    for(let j=0;j<bs.length;j++){
+      if(j===i)continue;
+      const dx=bs[i].position.x-bs[j].position.x,dy=bs[i].position.y-bs[j].position.y,dz=bs[i].position.z-bs[j].position.z;
+      if(dx*dx+dy*dy+dz*dz<3.24)near.push(bs[j]);
+    }
+    if(near.length<3)continue;
+    const cluster=[bs[i],near[0],near[1],near[2]];
+    let cx=0,cy=0,cz=0;
+    for(const c of cluster){cx+=c.position.x;cy+=c.position.y;cz+=c.position.z}
+    cx/=4;cy/=4;cz/=4;
+    const big=cluster[0];
+    big.position.set(cx,cy+.2,cz);
+    big.u.big=true;big.u.r*=2.4;big.u.b*=1.5;big.u.rest=false;big.u.v.set(0,3.5,0);big.u.skip=0;big.u.padCd=0;
+    big.scale.setScalar(2.4);
+    for(let k=1;k<cluster.length;k++){const c=cluster[k];place(c);c.u.rest=true;c.u.v.set(0,0,0)}
+    sfx('launch');ripple(cx,cz,1.6);shake(.28);
+    const e=document.getElementById('bn');
+    if(e){e.innerHTML='<small>merge</small>mega burger';e.classList.add('on');clearTimeout(bt);bt=setTimeout(()=>e.classList.remove('on'),4200)}
+    addMsg('✦','mega burger!',1.0);
+    return;
+  }
+}
 const rings=[...Array(5)].map(()=>{const m=new T.Mesh(new T.RingGeometry(.3,.4,24).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false,opacity:.6}));m.visible=false;m.t=9;scene.add(m);return m});let ri=0;
 function splash(x,z){sfx('splash');ripple(x,z,1.3);{const d=Math.hypot(x-P.x,z-P.z);if(d<12)shake(.12*(1-d/12))}const r=rings[ri++%5];r.position.set(x,.06,z);r.t=0;r.visible=true;r.material.color.setHex(0xffffff)}
 // SKIP: new skipFx for visual/audio feedback on each bounce
@@ -1369,6 +1399,7 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
       if(u.v.y<-2){u.v.y*=-(u.b||.3);u.v.x*=.7;u.v.z*=.7}else{u.v.y=0;u.v.x*=.85;u.v.z*=.85;if(Math.hypot(u.v.x,u.v.z)<.4){u.rest=true;u.skip=0}}}}
   if(i===fr%rocks.length&&(u.rest||u.fl)&&r.position.distanceToSquared(P)>3600)place(r);
   if(u.kind===4&&r.position.distanceToSquared(P)<3){orbs++;sfx('orb');hud('orb!');place(r)}}
+if(inGame&&!RG.on){mergeT-=dt;if(mergeT<=0){mergeT=.35;tryMergeBurgers()}}
 for(const o of activeOres){if(o.flash>0){o.flash=Math.max(0,o.flash-dt*4);o.sp.material.opacity=.35+o.flash*.55;o.sp.scale.set(1.1+o.flash*1.1,1.1+o.flash*1.1,1)}
   o.m.rotation.y+=dt*o.spin;if(Math.abs(o.m.rotation.z)>.002)o.m.rotation.z*=Math.max(0,1-dt*7);else o.m.rotation.z=0}
 for(const r of rings)if(r.visible){r.t+=dt;r.scale.setScalar(1+r.t*7);r.material.opacity=Math.max(0,.55-r.t*.7);if(r.t>.9)r.visible=false}
