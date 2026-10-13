@@ -544,6 +544,7 @@ if(!all&&built)continue;let f=pool.find(c=>Math.max(Math.abs(c.cx-pcx),Math.abs(
 dirty=!all&&built>0;for(const c of pool){const d=Math.max(Math.abs(c.cx-pcx),Math.abs(c.cz-pcz));c.gv=d<=1;c.gr.visible=c.gv;c.tr.castShadow=d<=1}}
 const P=new V3();P.v=new V3();let ya=0,pt=-.1;
 function spawn(){for(let r=0;r<600;r+=6)for(let a=0;a<6.28;a+=.5){const x=Math.cos(a)*r,z=Math.sin(a)*r,h=H(x,z);if(h>2&&h<7&&slope(x,z,h)<.3){P.set(x,h,z);return}}}spawn();
+(function spawnDebugPad(){for(let r=5;r<=14;r+=2){for(let k=0;k<16;k++){const a=k/16*6.2832;const x=P.x+Math.cos(a)*r,z=P.z+Math.sin(a)*r;const h=H(x,z);if(h>.8){const g=new T.Group();g.position.set(x,h,z);const m=new T.Mesh(padG,padM);m.castShadow=true;g.add(m);const sp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0x66ddff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.45}));sp.position.y=.55;sp.scale.set(3.2,3.2,1);g.add(sp);scene.add(g);g.userData.gk='debug-first';g.userData.cx=x;g.userData.cz=z;g.userData.cy=h;g.userData.cooldown=0;padPool.push(g);return}}}})();
 const boat=(()=>{const g=new T.Group(),wood=[.5,.33,.2],N=30,M=18,HP=[],HC=[],HI=[],hw=t=>.95*Math.pow(Math.max(0,1-Math.pow(Math.abs(t),t>0?2.3:3.4)),.55)+.03,hr=t=>.2+.34*t*t*(t>0?1.5:.5);
 for(let i=0;i<=N;i++){const t=i/N*2-1,bw=hw(t),rail=hr(t),keel=-.52+.4*Math.pow(Math.abs(t),2.6)*(t>0?1:.3);
 for(let j=0;j<=M;j++){const a=j/M*Math.PI-Math.PI/2,x=bw*Math.sin(a),y=rail-(rail-keel)*Math.cos(a);HP.push(x,y,t*2.1);
