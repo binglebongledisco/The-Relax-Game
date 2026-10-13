@@ -358,7 +358,6 @@ vertexShader:'varying vec3 vD;void main(){vD=position;gl_Position=(projectionMat
 fragmentShader:'varying vec3 vD;uniform vec3 uSun;uniform float uT;'+NZ+SKY2+'void main(){gl_FragColor=vec4(sky(normalize(vD),uSun,uT),1.);}'}));
 skyM.frustumCulled=false;skyM.renderOrder=1;scene.add(skyM);
 const WR=[...Array(10)].map(()=>new THREE.Vector4(0,0,-99,0));let wri=0,wkT=0,wasW=false,trauma=0;function ripple(x,z,s){WR[wri++%10].set(x,z,U.uT.value,s)}function shake(a){trauma=Math.min(1,trauma+a)}
-function waveAt(x,z){const t=U.uT.value;const wx=Math.sin(x*0.06+t*0.8)+0.6*Math.sin(x*0.13-t*1.1);const wz=Math.sin(z*0.05+t*0.7)+0.6*Math.sin(z*0.11-t*0.9);return (wx+wz)*0.25}
 const RT=new T.WebGLRenderTarget(256,144,{minFilter:T.LinearFilter,magFilter:T.LinearFilter,format:T.RGBFormat}),rcam=new T.PerspectiveCamera(),rTM=new T.Matrix4(),rPl=new T.Plane(new V3(0,1,0),0),_rd=new V3(),_ru=new V3();let rtOK=false;
 function reflectPass(uw){
   if(uw||cam.position.y>50||pt>1.1){rtOK=false;wU.uRF.value=0;return}
@@ -561,7 +560,7 @@ function leaveBoat(){if(!inBoat)return;
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
 const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null;
 // SKIP: place() now also resets skip counter when a rock is (re)spawned
-function place(m){const a=sRng()*6.283,r=8+sRng()*48,x=P.x+Math.cos(a)*r,z=P.z+Math.sin(a)*r;m.position.set(x,H(x,z)+m.u.r*.5,z);m.u.rest=true;m.u.v.set(0,0,0);m.u.skip=0;if(m.u.fl&&m.position.y<0){m.position.y=waveAt(x,z);m.u.rest=false}}
+function place(m){const a=sRng()*6.283,r=8+sRng()*48,x=P.x+Math.cos(a)*r,z=P.z+Math.sin(a)*r;m.position.set(x,H(x,z)+m.u.r*.5,z);m.u.rest=true;m.u.v.set(0,0,0);m.u.skip=0;if(m.u.fl&&m.position.y<0){m.position.y=0;m.u.rest=false}}
 // SKIP: add skip:0 to rock data
 for(let i=0;i<36;i++){const r=.15+Math.random()*.25,m=new T.Mesh(rg,rms[i%3]);m.scale.set(r*1.2,r*.8,r*1.1);m.rotation.set(Math.random()*6,Math.random()*6,0);m.castShadow=true;m.u={r,kind:8,v:new V3(),rest:true,held:false,remoteHeld:null,idx:rocks.length,skip:0};place(m);rocks.push(m);scene.add(m)}
 const PH=(c,o)=>new T.MeshPhongMaterial(Object.assign({color:c,shininess:60,specular:0x444444},o)),hue=()=>new T.Color().setHSL(Math.random(),.65,.55);
@@ -1190,7 +1189,7 @@ else{
     if(bh>-.45){let bx=0,bz=0,bestD=bh;for(let a=0;a<8;a++){const ang=a*Math.PI/4;const sx=boat.root.position.x+Math.cos(ang)*2.5,sz=boat.root.position.z+Math.sin(ang)*2.5;const sh=H(sx,sz);if(sh<bestD){bestD=sh;bx=Math.cos(ang);bz=Math.sin(ang)}}
       if(bx||bz){boat.root.position.x+=bx*dt*3.5;boat.root.position.z+=bz*dt*3.5}boat.speed*=0.5}
     const sf=boat.speed/maxSpeed,tt=U.uT.value;boat.lean=(boat.lean||0)+((-turn*sf*.22)-(boat.lean||0))*Math.min(1,dt*3);
-    boat.root.rotation.order='YXZ';boat.root.position.y=waveAt(boat.root.position.x,boat.root.position.z)+Math.abs(sf)*.05;boat.root.rotation.set(Math.sin(tt*1.3)*.025-sf*.06,boat.heading,boat.lean+Math.sin(tt*1.6)*.03);
+    boat.root.rotation.order='YXZ';boat.root.position.y=.06*Math.sin(tt*1.8)+Math.abs(sf)*.05;boat.root.rotation.set(Math.sin(tt*1.3)*.025-sf*.06,boat.heading,boat.lean+Math.sin(tt*1.6)*.03);
     if(Math.abs(boat.speed)>1&&(boat.wk=(boat.wk||0)-dt)<0){boat.wk=.16;ripple(boat.root.position.x-Math.sin(boat.heading)*1.8,boat.root.position.z-Math.cos(boat.heading)*1.8,Math.abs(sf)*1.4+.3)}
     if(Math.abs(sf)>.5&&trauma<.12)trauma=.12;
     boat.root.updateMatrixWorld();boatSeatW.copy(boat.seats[mySeat]).applyMatrix4(boat.root.matrixWorld);
@@ -1200,7 +1199,7 @@ else{
     me.root.visible=true;me.hd.visible=true;me.root.position.set(P.x,P.y-.55,P.z);me.root.rotation.y=boat.heading;
     pose(me,U.uT.value,0,0,4,false,0,false);net(dt,U.uT.value,0,4);if(fr%30===0)hud()}
   else if(swim){
-    const cp=Math.cos(pt),SURF=.05+waveAt(P.x,P.z);
+    const cp=Math.cos(pt),SURF=.05;
     const tx=(-sy*cp*iy+cy*ix)*3.4,tz=(-cy*cp*iy-sy*ix)*3.4;
     const aboveW=P.y>SURF+.12;
     if(aboveW){P.v.y-=18*dt;P.v.x+=(tx*.5-P.v.x)*Math.min(1,dt*2);P.v.z+=(tz*.5-P.v.z)*Math.min(1,dt*2)}
@@ -1267,7 +1266,7 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
     continue}
   if(!r.visible)r.visible=true;
   if(u.held){if(!handR.visible){me.haR.getWorldPosition(r.position);r.position.y-=.05}continue}
-  if(!u.rest){const py=r.position.y,gg=H(r.position.x,r.position.z),inW=py<0&&gg<0;u.v.y-=(inW?(u.fl?-7:5):18)*dt;if(inW)u.v.multiplyScalar(1-2.5*dt);if(u.fl&&inW){u.v.y+=(waveAt(r.position.x,r.position.z)-r.position.y)*4*dt}
+  if(!u.rest){const py=r.position.y,gg=H(r.position.x,r.position.z),inW=py<0&&gg<0;u.v.y-=(inW?(u.fl?-7:5):18)*dt;if(inW)u.v.multiplyScalar(1-2.5*dt);
     {const nS=Math.min(8,Math.max(1,Math.ceil(u.v.length()*dt/.2))),sd=dt/nS;for(let z2=0;z2<nS;z2++){r.position.addScaledVector(u.v,sd);hitCol(r)}}r.rotation.x+=u.v.length()*dt*.4;r.rotation.z+=u.v.x*dt*.3;
     if(u.thrownBy && u.thrownBy!=='me' && myKo<=0 && rm && u.thrownBy!==rm.id){const dx=r.position.x-P.x,dy=r.position.y-(P.y+1.0),dz=r.position.z-P.z;
       if(dx*dx+dy*dy+dz*dz<1.2){myKo=2.0;sfx('ko');shake(.8);if(rm)rm.emit('hit',{by:u.thrownBy});addMsg('·','You were knocked over by '+nameOf(u.thrownBy)+'!',.02);u.v.multiplyScalar(0.3)}}
