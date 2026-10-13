@@ -715,13 +715,15 @@ else if(c.t===5){
     const ry0=t.y+t.h+PY.by0;
     const ti=tiers.indexOf(t);
     const nextS=(ti+1<tiers.length)?tiers[ti+1].s:t.s*.4;
-    const inner=nextS*.5;
-    const band=(t.s-inner)/2;
-    const ctr=(t.s+inner)/4;
-    S.push([new T.BoxGeometry(t.s,.5,band).translate(0,0,-ctr),mt(0,ry0,0),[.80,.74,.62],.03,SH]);
-    S.push([new T.BoxGeometry(t.s,.5,band).translate(0,0, ctr),mt(0,ry0,0),[.80,.74,.62],.03,SH]);
-    S.push([new T.BoxGeometry(band,.5,t.s).translate(-ctr,0,0),mt(0,ry0,0),[.80,.74,.62],.03,SH]);
-    S.push([new T.BoxGeometry(band,.5,t.s).translate( ctr,0,0),mt(0,ry0,0),[.80,.74,.62],.03,SH]);
+    const innerR=Math.max(nextS*.5, 6);
+    const band=(t.s*.5-innerR);
+    if(band>0.5){
+      const ctr=(t.s*.5+innerR)/2;
+      S.push([new T.BoxGeometry(t.s,.5,band).translate(0,0,-ctr),mt(0,ry0,0),[.80,.74,.62],.03,SH]);
+      S.push([new T.BoxGeometry(t.s,.5,band).translate(0,0, ctr),mt(0,ry0,0),[.80,.74,.62],.03,SH]);
+      S.push([new T.BoxGeometry(band,.5,t.s).translate(-ctr,0,0),mt(0,ry0,0),[.80,.74,.62],.03,SH]);
+      S.push([new T.BoxGeometry(band,.5,t.s).translate( ctr,0,0),mt(0,ry0,0),[.80,.74,.62],.03,SH]);
+    }
     
   }
   S.push([new T.BoxGeometry(12,12,.6),mt(0,26+PY.by0,0),[.80,.74,.60],.03,SH]);
