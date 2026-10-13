@@ -595,7 +595,7 @@ function leaveBoat(){if(!inBoat)return;
   const rx=Math.cos(ya),rz=-Math.sin(ya);P.x+=rx*4.2;P.z+=rz*4.2;const gg=H(P.x,P.z);P.y=Math.max(gg,0.05);P.v.set(0,4,0);
   const lb=document.getElementById('lb');if(lb)lb.style.display='none'}
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
-const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1,eatChompsN=0;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
+const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1,eatChomped=0;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
 // SKIP: place() now also resets skip counter when a rock is (re)spawned
 function place(m){const a=sRng()*6.283,r=8+sRng()*48,x=P.x+Math.cos(a)*r,z=P.z+Math.sin(a)*r;m.position.set(x,H(x,z)+m.u.r*.5,z);m.u.rest=true;m.u.v.set(0,0,0);m.u.skip=0;if(m.u.fl&&m.position.y<0){m.position.y=0;m.u.rest=false}}
 // SKIP: add skip:0 to rock data
@@ -778,7 +778,7 @@ else if(k==='click'){tone(2200,.03,'square',.1);tone(1400,.035,'square',.09,0,.0
 else if(k==='thud'){tone(90,.2,'sine',.5*t,42);nz(.12,450,.3*t,.7)}
 else if(k==='launch'){sweep(200,1800,.25,.4,1.1);tone(880,.25,'sine',.22,220,.02);tone(220,.4,'triangle',.3,110,.05)}
 else if(k==='eat'){nz(.07,700,.35,1.6);tone(190,.1,'sine',.22,80,.03);setTimeout(()=>nz(.07,500,.3,1.6),110)}
-else if(k==='chomp'){const n=(t||1),f=780+n*160;nz(.055,f,.4,1.6);tone(150+n*20,.1,'triangle',.18,70,.015);setTimeout(()=>nz(.045,f*.75,.22,1.8),90)}else if(k==='boing')tone(180,.35,'sine',.3,720);else return 0;return 1}
+else if(k==='chomp'){const t0=ac.currentTime;const s=ac.createBufferSource();s.buffer=nb;const f=ac.createBiquadFilter();f.type='lowpass';f.Q.value=1.1;f.frequency.setValueAtTime(1600,t0);f.frequency.exponentialRampToValueAtTime(280,t0+.13);const g=ac.createGain();g.gain.setValueAtTime(.0001,t0);g.gain.linearRampToValueAtTime(.55,t0+.005);g.gain.exponentialRampToValueAtTime(.0001,t0+.16);s.connect(f);f.connect(g);g.connect(aG);s.start(t0,Math.random());s.stop(t0+.2);const o=ac.createOscillator(),og=ac.createGain();o.type='sine';o.frequency.setValueAtTime(180,t0);o.frequency.exponentialRampToValueAtTime(65,t0+.1);og.gain.setValueAtTime(.0001,t0);og.gain.linearRampToValueAtTime(.4,t0+.007);og.gain.exponentialRampToValueAtTime(.0001,t0+.14);o.connect(og);og.connect(aG);o.start(t0);o.stop(t0+.17);setTimeout(()=>{const t1=ac.currentTime;const s2=ac.createBufferSource();s2.buffer=nb;const f2=ac.createBiquadFilter();f2.type='bandpass';f2.frequency.value=550;f2.Q.value=1.4;const g2=ac.createGain();g2.gain.setValueAtTime(.0001,t1);g2.gain.linearRampToValueAtTime(.2,t1+.005);g2.gain.exponentialRampToValueAtTime(.0001,t1+.08);s2.connect(f2);f2.connect(g2);g2.connect(aG);s2.start(t1,Math.random());s2.stop(t1+.11);},50)}else if(k==='boing')tone(180,.35,'sine',.3,720);else return 0;return 1}
 function sfx(k,t){if(!ac)return;if(sfx2(k,t))return;if(k==='jump'){tone(340,.22,'sine',.18,720)}else if(k==='grab')tone(520,.12,'sine',.22,780);else if(k==='whoosh')nz(.3,900,.32,.6);else if(k==='splash')nz(.45,1500,.36,.5);
 else if(k==='orb'){tone(880,.25,'sine',.24);tone(1320,.35,'sine',.2,0,.08)}else if(k==='ko'){tone(140,.5,'sine',.5,50);nz(.3,300,.4,.7)}
 else if(k==='swing')nz(.18,1200,.22,.8);else if(k==='pick'){nz(.08,2600,.38,2);tone([700,900,1300,1800][t],.16,'triangle',.2)}
@@ -1160,7 +1160,7 @@ $('jb').onpointerdown=e=>{e.preventDefault();jump=true;try{$('jb').setPointerCap
 $('jb').onpointerup=$('jb').onpointercancel=()=>jump=false;
 $('lb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();leaveBoat()};
 $('rb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();toggleRun()};
-$('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(held&&held.u.kind===6&&eatT<0){eatT=0;eatChompsN=0;sfx('eat')}};
+$('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(held&&held.u.kind===6&&eatT<0){eatT=0;eatChomped=0;sfx('eat')}};
 const downPtrs=new Set();
 function releasePtr(id){
   downPtrs.delete(id);
@@ -1316,7 +1316,7 @@ holdK+=((held?1:0)-holdK)*Math.min(1,dt*9);handR.position.y+=holdK*.06;handR.rot
 lhG.position.set(-.36-breathX-walkBob,-.27+Math.sin(idle*1.2+1)*.007+Math.cos(bobT*2+1)*.018*spdMag*(1+runK*.5)+(1-lhVis*lhVis*(3-2*lhVis))*-.55+runK*.08,-.55+runK*.02-sw);
 lhG.rotation.set(-.25+Math.sin(idle*1.2+1)*.02-runK*.12+sw*2.2,-.1-Math.cos(idle*.8)*.015,-.15+walkBob*.8);
 dragK+=((dragging?1:0)-dragK)*Math.min(1,dt*8);{const tg=Math.sin(idle*5)*.03*dragK;handR.position.x-=dragK*.12;handR.position.z+=tg;handR.position.y+=dragK*.05;handR.rotation.y-=dragK*.15;lhG.position.x+=dragK*.12;lhG.position.z-=tg;lhG.position.y+=dragK*.05;lhG.rotation.y+=dragK*.15}
-if(eatT>=0){eatT+=dt;const chompN=Math.min(3,Math.floor(eatT/(EAT_DUR/7)));if(chompN>eatChompsN){eatChompsN=chompN;sfx('chomp',eatChompsN)}const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.held=false;held.u.rest=true;held.u.v.set(0,0,0);held.position.set(P.x+9000,700,P.z+9000);held=null;$('gb').textContent='Grab'}if(eatT>=EAT_DUR)eatT=-1}
+if(eatT>=0){eatT+=dt;if(!eatChomped&&eatT>=EAT_DUR*0.5){eatChomped=1;sfx('chomp')}const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.held=false;held.u.rest=true;held.u.v.set(0,0,0);held.position.set(P.x+9000,700,P.z+9000);held=null;$('gb').textContent='Grab'}if(eatT>=EAT_DUR)eatT=-1}
 if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompose(_hp,_hq,new T.Vector3());
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
