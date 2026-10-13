@@ -1,1 +1,1 @@
-Bloxlicka Browser P2P Calm hangout game yes yes
+Welcome to bloxlicka, a browser P2P multiplayer hangout game!
