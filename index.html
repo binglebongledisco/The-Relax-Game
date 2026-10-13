@@ -376,10 +376,10 @@ function reflectPass(uw){
   water.visible=handR.visible=lhG.visible=motes.visible=false;rd.clippingPlanes=[rPl];
   rd.setRenderTarget(RT);rd.clear();rd.render(scene,rcam);rd.setRenderTarget(null);
   rd.clippingPlanes=cp;water.visible=v0[0];handR.visible=v0[1];lhG.visible=v0[2];motes.visible=v0[3];rtOK=true;wU.uRF.value=1}
-const wU={uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.014},uR:{value:WR},uBN:{value:0},uRT:{value:RT.texture},uTM:{value:rTM},uRF:{value:0},uSkyBlack:{value:0}};
+const wU={uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.014},uR:{value:WR},uBN:{value:0},uRT:{value:RT.texture},uTM:{value:rTM},uRF:{value:0},uSkyBlack:{value:0},uTsunPull:{value:0},uTsunWave:{value:0},uTsunCenter:{value:new T.Vector2(0,0)},uTsunRadius:{value:0}};
 const water=new T.Mesh(new T.PlaneGeometry(700,700).rotateX(-Math.PI/2),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,precision:HIGHP,uniforms:wU,
 vertexShader:'varying vec3 vP;void main(){vec4 w=modelMatrix*vec4(position,1.);vP=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
-fragmentShader:`varying vec3 vP;uniform vec3 uSun,uCam,uFog;uniform float uT,uFd,uSkyBlack;uniform vec4 uR[10];uniform float uBN;uniform sampler2D uRT;uniform mat4 uTM;uniform float uRF;`+NZ+`
+fragmentShader:`varying vec3 vP;uniform vec3 uSun,uCam,uFog;uniform float uT,uFd,uSkyBlack;uniform vec4 uR[10];uniform float uBN;uniform sampler2D uRT;uniform mat4 uTM;uniform float uRF;uniform float uTsunPull,uTsunWave,uTsunRadius;uniform vec2 uTsunCenter;`+NZ+`
 void main(){vec2 p=vP.xz;float t=uT;
 vec2 g=vec2(sin(p.x*.8+t*1.1)+sin(p.y*1.3-t*.9)+.5*sin((p.x+p.y)*2.3+t*1.7),
             cos(p.y*.7+t)+cos(p.x*1.6-t*1.2)+.5*cos((p.x-p.y)*2.7-t*1.5))*.035;
@@ -396,6 +396,9 @@ col+=(1.-uBN)*vec3(1.,.92,.75)*(pow(max(dot(n,h),0.),200.)*.9+pow(max(dot(n,h),0
 col=mix(col,vec3(1.),smoothstep(.2,.34,length(g))*.3);
 float d=length(uCam-vP);col=mix(col,uFog,1.-exp(-d*d*uFd*uFd));
 col*=(1.-uSkyBlack);
+{float tsd=length(vP.xz-uTsunCenter);float tsBand=(1.-smoothstep(uTsunRadius-15.,uTsunRadius+25.,tsd))*smoothstep(0.,1.,uTsunRadius);
+col+=vec3(1.,.93,.85)*uTsunWave*tsBand*1.15;
+col=mix(col,col*.28,uTsunPull);}
 gl_FragColor=vec4(col,gl_FrontFacing?mix(.62,1.,f):.92);}`}));
 water.renderOrder=2;water.frustumCulled=false;scene.add(water);
 function patch(m,key,vcode){m.customProgramCacheKey=()=>key;m.onBeforeCompile=s=>{s.uniforms.uT=U.uT;
@@ -938,6 +941,7 @@ for(const[k,g]of PM){if(Math.abs(g.c.x-P.x)>CL*5||Math.abs(g.c.z-P.z)>CL*5)dropP
 for(const g of PM.values())if(g.gm){g.gm.rotation.y+=dt*g.spin;if(g.c.t===3)g.gm.position.y=Math.sin(t*.9)*.3}for(const L of lhPool){const b=L.userData.beam;if(b){b.rotation.y=t*0.9}}}
 function regen(q,keepPos){
   const kx=P.x,kz=P.z;
+  if(tsunami)endTsunami();
   setSeed(q);
   clearSkyBreak();
   for(const k of [...PM.keys()])dropPOI(k);
@@ -1167,7 +1171,7 @@ function netErrMsg(e,n){const t=String((e&&(e.type||e.message))||'error');const 
 function returnHome(title,msg,kind){
   netTok++;try{if(rm){rm.leave()}}catch(e){}
   rm=null;rn='';inGame=false;mutedByHost=false;lastPlayerList=[];
-  despawnDino();
+  if(tsunami)endTsunami();
   boatAuthority=null;inBoat=false;mySeat=-1;boat.occupants=[null,null];
   for(const k in rem){try{scene.remove(rem[k].root)}catch(e){}delete rem[k]}
   document.body.classList.remove('ig');
@@ -1534,7 +1538,7 @@ if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-
 if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompose(_hp,_hq,new T.Vector3());
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
-skyM.position.copy(cam.position);water.position.set(P.x,0,P.z);
+skyM.position.copy(cam.position);water.position.x=P.x;water.position.z=P.z;if(!tsunami)water.position.y=0;
 sun.target.position.set(Math.round(P.x/2)*2,0,Math.round(P.z/2)*2);sun.position.copy(sun.target.position).addScaledVector(SUN,90);
 chunks(false);if(fr%4===0)rd.shadowMap.needsUpdate=true;
 for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
@@ -1561,9 +1565,6 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
         break;
       }
     }}r.rotation.x+=u.v.length()*dt*.4;r.rotation.z+=u.v.x*dt*.3;
-    if(dino&&dino.alive){const ddx=r.position.x-dino.position.x,ddz=r.position.z-dino.position.z;
-      const ddy=r.position.y-(dino.position.y+1.5);
-      if(ddx*ddx+ddz*ddz<6.25&&Math.abs(ddy)<2.5){dinoHit(r);u.v.multiplyScalar(0.3)}}
     if(u.thrownBy && u.thrownBy!=='me' && myKo<=0 && rm && u.thrownBy!==rm.id){const dx=r.position.x-P.x,dy=r.position.y-(P.y+1.0),dz=r.position.z-P.z;
       if(dx*dx+dy*dy+dz*dz<1.2){myKo=2.0;sfx('ko');shake(.8);if(rm)rm.emit('hit',{by:u.thrownBy});addMsg('·','You were knocked over by '+nameOf(u.thrownBy)+'!',.02);u.v.multiplyScalar(0.3)}}
     // SKIP: rock skipping logic - replaces the old splash-on-water check
@@ -1599,7 +1600,8 @@ const t=U.uT.value;for(let i=0;i<NB;i++){const a=t*(.12+.02*(i%5))*(i%2?1:-1)+i*
 birds.instanceMatrix.needsUpdate=true;
 for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t*.8+i)*.5;mp[j+1]=P.y+.3+((i*.137+t*.04)%1)*8;mp[j+2]=P.z+Math.cos(i*7.7+t*.06)*15+Math.cos(t*.9+i)*.5}mg.attributes.position.needsUpdate=true;motes.visible=!uw;
 {const ic=inCave();sun.intensity+=((((ic?.35:1.1))*(1-skyBlack))-sun.intensity)*Math.min(1,dt*3)}
-poiTick(dt,t);if(inGame)dinoTick(dt);if(fr%6===0)mixAudio(uw);
+poiTick(dt,t);if(fr%6===0)mixAudio(uw);
+if(inGame){tsunamiTick(dt);tryTsunamiCraft(dt)}
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
 $('ebt').style.display=(held&&held.u.kind===6&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
@@ -1608,260 +1610,237 @@ if(trauma>0){trauma=Math.max(0,trauma-dt*1.4);const s=trauma*trauma,q=t*28;cam.r
 rd.render(scene,cam);reflectPass(uw)}
 
 // ============================================================
-//  DINO NPC
+//  TSUNAMI
 // ============================================================
-let dino=null;
-function wrapAngle(a){return Math.atan2(Math.sin(a),Math.cos(a))}
-function mkDino(){
+let tsunami=null,tsuCraftT=0;
+const TSU_DUR_PULL=10;
+const tsuShields=new Map();
+function tsuShieldRadius(c){return c.t===0?14:c.t===2?18:c.t===3?10:12}
+function mkShieldDome(radius){
   const g=new T.Group();
-  const body=new T.MeshPhongMaterial({color:0x4a6a3a,shininess:22,specular:0x222222});
-  const belly=new T.MeshPhongMaterial({color:0x7a9a5a,shininess:15});
-  const teeth=new T.MeshPhongMaterial({color:0xf5f0e0,shininess:70});
-  const eyeW=new T.MeshPhongMaterial({color:0xffffff});
-  const eyeR=new T.MeshPhongMaterial({color:0xd02020,emissive:0x801010,emissiveIntensity:.55});
-  const core=new T.Mesh(new T.BoxGeometry(2.6,2.8,5),body);core.position.y=3.4;g.add(core);
-  const bp=new T.Mesh(new T.BoxGeometry(2,1.6,4.5),belly);bp.position.set(0,3.0,0.2);g.add(bp);
-  const tail=[];
-  for(const[p1,p2,p3,w,h,d]of [[0,3.2,-3.5,2.4,1.8,1.6],[0,2.9,-5.2,1.9,1.4,1.4],[0,2.5,-6.6,1.4,1.0,1.2],[0,2.0,-7.8,0.9,0.7,1.0]]){
-    const t=new T.Mesh(new T.BoxGeometry(w,h,d),body);t.position.set(p1,p2,p3);g.add(t);tail.push(t);
-  }
-  const neck1=new T.Mesh(new T.BoxGeometry(1.6,1.8,1.6),body);neck1.position.set(0,4.6,1.8);g.add(neck1);
-  const neck2=new T.Mesh(new T.BoxGeometry(1.4,1.6,1.4),body);neck2.position.set(0,5.8,2.8);g.add(neck2);
-  const hd=new T.Group();hd.position.set(0,6.8,3.4);g.add(hd);
-  const head=new T.Mesh(new T.BoxGeometry(1.8,1.8,2.2),body);hd.add(head);
-  const snout=new T.Mesh(new T.BoxGeometry(1.4,1.1,1.8),body);snout.position.set(0,-0.2,1.8);hd.add(snout);
-  const jaw=new T.Group();jaw.position.set(0,-0.6,0.6);hd.add(jaw);
-  const jawM=new T.Mesh(new T.BoxGeometry(1.3,0.35,1.6),body);jawM.position.z=1.2;jaw.add(jawM);
-  for(const tx of [-0.4,0,0.4]){const t=new T.Mesh(new T.BoxGeometry(0.12,0.3,0.12),teeth);t.position.set(tx,-0.35,2.6);hd.add(t)}
-  for(const tx of [-0.35,0,0.35]){const t=new T.Mesh(new T.BoxGeometry(0.12,0.25,0.12),teeth);t.position.set(tx,0.15,2.2);jaw.add(t)}
-  const eL=new T.Mesh(new T.SphereGeometry(0.24,10,8),eyeW);eL.position.set(-0.55,0.35,1.2);hd.add(eL);
-  const eR=new T.Mesh(new T.SphereGeometry(0.24,10,8),eyeW);eR.position.set(0.55,0.35,1.2);hd.add(eR);
-  const pL=new T.Mesh(new T.SphereGeometry(0.13,8,6),eyeR);pL.position.set(-0.6,0.35,1.42);hd.add(pL);
-  const pR=new T.Mesh(new T.SphereGeometry(0.13,8,6),eyeR);pR.position.set(0.6,0.35,1.42);hd.add(pR);
-  const legs=[];
-  for(const sd of [-1,1]){
-    const thigh=new T.Mesh(new T.BoxGeometry(0.9,2,1.2),body);thigh.position.set(sd*1.1,2.2,0.5);g.add(thigh);
-    const shin=new T.Mesh(new T.BoxGeometry(0.7,1.8,0.9),body);shin.position.set(sd*1.1,0.4,0.8);g.add(shin);
-    const foot=new T.Mesh(new T.BoxGeometry(1.1,0.4,1.6),body);foot.position.set(sd*1.1,-0.6,1.0);g.add(foot);
-    legs.push({thigh,shin,foot,sd});
-  }
-  for(const sd of [-1,1]){
-    const arm=new T.Mesh(new T.BoxGeometry(0.4,0.7,0.4),body);arm.position.set(sd*1.3,3.9,2.2);g.add(arm);
-  }
-  g.traverse(o=>{if(o.isMesh)o.castShadow=true});
-  g.scale.setScalar(0.55);
-  g.userData={head:hd,jaw,tail,legs,eyeR};
-  return g;
+  const domeMat=new T.MeshBasicMaterial({color:0x88e0ff,transparent:true,opacity:0,side:T.DoubleSide,depthWrite:false,blending:T.AdditiveBlending,fog:false});
+  const dome=new T.Mesh(new T.SphereGeometry(radius,20,14,0,Math.PI*2,0,Math.PI/2),domeMat);
+  g.add(dome);
+  const ringMat=new T.MeshBasicMaterial({color:0xaef2ff,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,fog:false,side:T.DoubleSide});
+  const ring=new T.Mesh(new T.TorusGeometry(radius,0.25,8,40).rotateX(Math.PI/2),ringMat);
+  ring.position.y=0.1;g.add(ring);
+  const ring2=new T.Mesh(new T.TorusGeometry(radius*0.98,0.08,6,40).rotateX(Math.PI/2),ringMat);
+  ring2.position.y=Math.max(1.2,radius*0.5);g.add(ring2);
+  return {g,dome,ring,ring2,domeMat,ringMat,radius};
 }
-function despawnDino(){
-  if(dino&&dino.root){scene.remove(dino.root);dino.root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()})}
-  dino=null;
+function clearTsuShields(){
+  for(const s of tsuShields.values()){
+    scene.remove(s.g);
+    s.g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});
+  }
+  tsuShields.clear();
 }
-function dinoLandOK(x,z){
-  // Reject small islands: sample rings at multiple radii, count how much is land
-  let land=0,total=0;
-  for(const rr of [10,18,26,34]){
-    for(let a=0;a<8;a++){
-      const an=a*(6.2832/8);
-      const sx=x+Math.cos(an)*rr,sz=z+Math.sin(an)*rr;
-      total++;
-      if(H(sx,sz)>-0.35)land++;
+function playerInShield(){
+  for(const [id,g] of PM){
+    const R=tsuShieldRadius(g.c);
+    const dx=P.x-g.c.x,dz=P.z-g.c.z;
+    if(dx*dx+dz*dz<R*R*0.85)return true;
+  }
+  return false;
+}
+function mkWaveMesh(){
+  const g=new T.Group();
+  const waveUniforms={uT:U.uT};
+  const mat=new T.ShaderMaterial({
+    uniforms:waveUniforms,
+    transparent:true,depthWrite:false,side:T.DoubleSide,fog:false,precision:HIGHP,
+    vertexShader:'varying vec2 vUv;void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.);gl_Position=projectionMatrix*viewMatrix*w;}',
+    fragmentShader:`varying vec2 vUv;uniform float uT;`+NZ+`
+void main(){
+  float n1=fb(vUv*vec2(8.,2.)+vec2(uT*1.6,uT*0.4));
+  float n2=vn(vUv*vec2(22.,6.)+vec2(uT*3.2,-uT*0.8));
+  float n3=vn(vUv*vec2(60.,14.)+vec2(-uT*5.,uT*1.2));
+  float foam=smoothstep(.42,.85,n1*.5+n2*.35+n3*.15);
+  vec3 deep=vec3(.05,.22,.32);
+  vec3 mid=vec3(.32,.62,.76);
+  vec3 crest=vec3(.95,.98,1.);
+  vec3 col=mix(deep,mid,smoothstep(.2,.7,n1*.6+n2*.4));
+  col=mix(col,crest,foam*.92);
+  float edge=smoothstep(0.,0.12,vUv.y)*smoothstep(1.,0.88,vUv.y);
+  float alpha=mix(.5,.98,foam)*edge+0.5*(1.-edge);
+  col+=vec3(.6,.85,.95)*pow(1.-vUv.y,3.)*0.3;
+  gl_FragColor=vec4(col,clamp(alpha,0.,.97));
+}`});
+  const wall=new T.Mesh(new T.PlaneGeometry(420,46,1,1),mat);
+  wall.position.y=23;g.add(wall);
+  const capMat=new T.MeshPhongMaterial({color:0xeaf8ff,emissive:0x88bbcc,emissiveIntensity:.3,shininess:100,transparent:true,opacity:.88,depthWrite:false});
+  const crest=new T.Mesh(new T.CylinderGeometry(4.5,4.5,420,20),capMat);
+  crest.rotation.z=Math.PI/2;
+  crest.position.y=46;g.add(crest);
+  const skirt=new T.Mesh(new T.PlaneGeometry(440,10),new T.MeshBasicMaterial({color:0xdff6ff,transparent:true,opacity:.55,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,fog:false}));
+  skirt.position.y=1;skirt.rotation.x=-Math.PI/2;
+  g.add(skirt);
+  return {g,mat,capMat};
+}
+function startTsunami(x,z){
+  if(tsunami)return;
+  const ang=Math.random()*6.283;
+  const dist=280;
+  const sx=x+Math.cos(ang)*dist, sz=z+Math.sin(ang)*dist;
+  let dirX=x-sx, dirZ=z-sz;
+  const dlen=Math.hypot(dirX,dirZ)||1;
+  dirX/=dlen; dirZ/=dlen;
+  const wv=mkWaveMesh();
+  wv.g.rotation.y=Math.atan2(dirX,dirZ);
+  wv.g.position.set(sx,0,sz);
+  scene.add(wv.g);
+  tsunami={phase:'pull',t:0,wave:wv,dirX,dirZ,origY:0,impacted:false};
+  addMsg('\u2726','the sea pulls back...',.05);
+  sfx('ko');shake(.5);
+  clearTsuShields();
+  for(const [id,g] of PM){
+    const R=tsuShieldRadius(g.c);
+    const s=mkShieldDome(R);
+    s.g.position.set(g.c.x,g.c.y,g.c.z);
+    scene.add(s.g);
+    tsuShields.set(id,s);
+  }
+}
+function knockChunkTrees(chunk){
+  if(chunk.treesDown)return;
+  chunk.treesDown=true;
+  const n=chunk.tr.count;
+  if(n<=0)return;
+  const m=new T.Matrix4(),pos=new T.Vector3(),quat=new T.Quaternion(),scl=new T.Vector3();
+  const q2=new T.Quaternion(),axis=new T.Vector3();
+  for(let i=0;i<n;i++){
+    chunk.tr.getMatrixAt(i,m);
+    m.decompose(pos,quat,scl);
+    const a=Math.random()*6.28;
+    axis.set(Math.cos(a),0,Math.sin(a));
+    q2.setFromAxisAngle(axis,Math.PI*0.42);
+    quat.multiply(q2);
+    m.compose(pos,quat,scl);
+    chunk.tr.setMatrixAt(i,m);
+  }
+  chunk.tr.instanceMatrix.needsUpdate=true;
+}
+function endTsunami(){
+  if(!tsunami)return;
+  if(tsunami.wave){scene.remove(tsunami.wave.g);tsunami.wave.g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()})}
+  tsunami=null;
+  clearTsuShields();
+  for(const c of pool){if(c.treesDown){c.cx=1e9;c.cz=1e9;c.treesDown=false}}
+  chunks(true);
+  water.position.y=0;
+  if(wU.uTsunPull)wU.uTsunPull.value=0;
+  if(wU.uTsunWave)wU.uTsunWave.value=0;
+  if(wU.uTsunRadius)wU.uTsunRadius.value=0;
+  addMsg('\u2726','the sea settles',.05);
+}
+function tryTsunamiCraft(dt){
+  if(tsunami)return;
+  if(rm&&!rm.isHost)return;
+  tsuCraftT-=dt;if(tsuCraftT>0)return;tsuCraftT=0.5;
+  const rs=[],bs=[];
+  for(const r of rocks){
+    if(r.u.held||r.u.remoteHeld||!r.u.rest||r.u.skyBreaker)continue;
+    if(r.u.kind===8)rs.push(r);
+    else if(r.u.kind===6&&!r.u.big)bs.push(r);
+  }
+  if(rs.length<2||bs.length<2)return;
+  for(let i=0;i<rs.length;i++)for(let j=i+1;j<rs.length;j++){
+    const r1=rs[i],r2=rs[j];
+    if(r1.position.distanceToSquared(r2.position)>4)continue;
+    for(let a=0;a<bs.length;a++)for(let b=a+1;b<bs.length;b++){
+      const b1=bs[a],b2=bs[b];
+      if(r1.position.distanceToSquared(b1.position)>4)continue;
+      if(r1.position.distanceToSquared(b2.position)>4)continue;
+      if(r2.position.distanceToSquared(b1.position)>4)continue;
+      if(r2.position.distanceToSquared(b2.position)>4)continue;
+      if(b1.position.distanceToSquared(b2.position)>4)continue;
+      const x=(r1.position.x+r2.position.x+b1.position.x+b2.position.x)/4;
+      const z=(r1.position.z+r2.position.z+b1.position.z+b2.position.z)/4;
+      place(r1);place(r2);place(b1);place(b2);
+      startTsunami(x,z);
+      return;
     }
   }
-  if(land/total<0.5)return false;
-  // Also require a mostly-dry corridor back toward the player
-  const dx=P.x-x,dz=P.z-z,d=Math.hypot(dx,dz);
-  if(d>4){
-    let cl=0,ct=0;
-    const step=Math.max(4,d/12);
-    for(let t=step;t<d;t+=step){
-      const u=t/d,sx=x+dx*u,sz=z+dz*u;
-      ct++;
-      if(H(sx,sz)>-0.35)cl++;
+}
+function tsunamiTick(dt){
+  if(!tsunami)return;
+  const T0=U.uT.value;
+  tsunami.t+=dt;
+  const wv=tsunami.wave;
+  if(tsunami.phase==='pull'){
+    const p=Math.min(1,tsunami.t/TSU_DUR_PULL);
+    const e=p*p*(3-2*p);
+    water.position.y=-10*e;
+    wU.uTsunPull.value=e;
+    wU.uTsunWave.value=0;
+    wU.uTsunRadius.value=0;
+    for(const s of tsuShields.values()){
+      s.domeMat.opacity=0.05+0.10*e*(0.6+0.4*Math.sin(T0*3));
+      s.ringMat.opacity=0.15+0.45*e*(0.6+0.4*Math.sin(T0*4));
     }
-    if(ct>0&&cl/ct<0.6)return false;
-  }
-  return true;
-}
-function spawnDino(){
-  despawnDino();
-  let best=null;
-  for(let a=0;a<80;a++){
-    const an=Math.random()*6.283;
-    const r=38+Math.random()*22;
-    const x=P.x+Math.cos(an)*r,z=P.z+Math.sin(an)*r;
-    const h=H(x,z);
-    if(h<0.6||h>22)continue;
-    if(slope(x,z,h)>0.7)continue;
-    if(inPit(x,z))continue;
-    if(!dinoLandOK(x,z))continue;
-    best={x,z,h};break;
-  }
-  if(!best){outer:for(let rr=30;rr<=70;rr+=4){for(let an=0;an<6.283;an+=0.4){
-    const x=P.x+Math.cos(an)*rr,z=P.z+Math.sin(an)*rr,h=H(x,z);
-    if(h>0.6&&h<22&&slope(x,z,h)<0.7&&!inPit(x,z)&&dinoLandOK(x,z)){best={x,z,h};break outer}
-  }}}
-  if(!best)return;
-  const g=mkDino();
-  g.position.set(best.x,best.h,best.z);
-  scene.add(g);
-  dino={root:g,position:new V3(best.x,best.h,best.z),heading:Math.random()*6.283,
-    state:'idle',angry:false,hits:0,stunT:0,alertT:0,recoverT:0,wanderT:0,
-    wanderTgt:{x:best.x,z:best.z},lastSeenX:0,lastSeenZ:0,lastSeenT:-999,spd:0,alive:true};
-  addMsg('\u2726','a dinosaur roams nearby...',.15);
-}
-function dinoCanSee(){
-  if(!dino)return false;
-  const dx=P.x-dino.position.x,dz=P.z-dino.position.z;
-  const d2=dx*dx+dz*dz;
-  const range=dino.angry?32:20;
-  if(d2>range*range)return false;
-  const d=Math.sqrt(d2)||1;
-  const fx=Math.sin(dino.heading),fz=Math.cos(dino.heading);
-  const dot=(dx*fx+dz*fz)/d;
-  const halfCos=dino.angry?0.2:0.5;
-  if(dot<halfCos)return false;
-  const eyeY=dino.position.y+2.2,py=P.y+1;
-  for(let i=1;i<6;i++){
-    const t=i/6;
-    const sx=dino.position.x+dx*t,sz=dino.position.z+dz*t;
-    const sy=eyeY+(py-eyeY)*t;
-    if(H(sx,sz)>sy+0.3)return false;
-  }
-  return true;
-}
-function dinoNoise(){
-  if(!inGame||myKo>0)return 0;
-  const spd=Math.hypot(P.v.x,P.v.z);
-  if(inBoat&&Math.abs(boat.speed)>2)return 14;
-  if(spd<0.15)return 0;
-  let n=spd*3;
-  if(running)n+=5;
-  if(H(P.x,P.z)<-0.5)n*=0.5;
-  return n;
-}
-function attackPlayer(){
-  if(myKo>0)return;
-  myKo=2.0;
-  sfx('ko');shake(0.9);
-  const dx=P.x-dino.position.x,dz=P.z-dino.position.z;
-  const d=Math.hypot(dx,dz)||1;
-  P.v.x+=dx/d*8;P.v.y=6;P.v.z+=dz/d*8;
-  addMsg('\u00b7','The dinosaur knocked you over!',.02);
-  if(rm)rm.emit('chat',{t:'\u2726 the dinosaur knocked '+ (uname||'someone') +' over',h:.02,n:''});
-}
-function dinoHit(r){
-  if(!dino||!dino.alive)return;
-  dino.hits++;
-  sfx('thud',1);shake(0.3);
-  const dx=dino.position.x-r.position.x,dz=dino.position.z-r.position.z;
-  const d=Math.hypot(dx,dz)||1;
-  const kx=dino.position.x+dx/d*0.6,kz=dino.position.z+dz/d*0.6;
-  if(H(kx,kz)>-0.35){dino.position.x=kx;dino.position.z=kz}
-  const wasStunned=dino.state==='stun';
-  dino.state='stun';dino.stunT=2.5;
-  if(wasStunned&&!dino.angry){dino.angry=true;addMsg('\u2726','the dinosaur is ENRAGED',1.0);sfx('ko');shake(0.7)}
-  if(dino.hits>=6){dino.state='flee';addMsg('\u2726','the dinosaur flees!',0.9)}
-  hud('dino hit '+dino.hits+'/6');
-}
-function animDino(dt,stunned){
-  if(!dino)return;
-  const u=dino.root.userData,t=U.uT.value,spd=dino.spd||0;
-  const walkT=spd>0.1?t*spd*1.4:t*0.6;
-  for(const L of u.legs){
-    const phase=L.sd>0?0:Math.PI;
-    const sw=Math.sin(walkT+phase)*Math.min(0.6,spd*0.09);
-    L.thigh.position.z=0.5+sw*0.5;
-    L.shin.position.z=0.8+sw*0.3;
-    L.foot.position.z=1.0+sw*0.6;
-    L.foot.position.y=-0.6+Math.max(0,sw)*0.35;
-  }
-  for(let i=0;i<u.tail.length;i++){u.tail[i].rotation.y=Math.sin(walkT*0.8+i*0.3)*0.15*(1+i*0.15)}
-  u.head.rotation.x=Math.sin(t*1.2)*0.05+(stunned?-0.5:0);
-  u.head.rotation.y=stunned?Math.sin(t*3)*0.15:0;
-  const chasing=dino.state==='chase'||dino.state==='flee';
-  const jawOpen=chasing?0.45+0.35*Math.sin(t*7):0.05+Math.max(0,Math.sin(t*1.5))*0.1;
-  u.jaw.rotation.x=-jawOpen;
-  u.eyeR.emissiveIntensity=dino.angry?1.1:0.55;
-}
-function dinoTick(dt){
-  if(!dino||!dino.alive)return;
-  const dx=P.x-dino.position.x,dz=P.z-dino.position.z;
-  const dist=Math.hypot(dx,dz);
-  const distY=Math.abs(P.y-dino.position.y);
-  if(dino.state==='stun'){
-    dino.stunT-=dt;
-    dino.spd=0;
-    dino.heading+=dt*0.4;
-    if(dino.stunT<=0)dino.state='chase';
-    dino.root.position.copy(dino.position);dino.root.rotation.y=dino.heading;
-    animDino(dt,true);return;
-  }
-  const seen=dinoCanSee();
-  const noise=dinoNoise();
-  const heard=noise>0&&dist<noise;
-  if(seen){
-    dino.lastSeenX=P.x;dino.lastSeenZ=P.z;dino.lastSeenT=U.uT.value;
-    if(dino.state!=='chase'&&dino.state!=='recover'&&dino.state!=='flee')dino.state='chase';
-  } else if(heard&&dino.state==='idle'){
-    dino.state='alert';dino.alertT=0;dino.lastSeenX=P.x;dino.lastSeenZ=P.z;
-  }
-  let tX=null,tZ=null,speed=0;
-  if(dino.state==='idle'){
-    if(dino.wanderT<=0){dino.wanderT=2+Math.random()*4;dino.wanderTgt={x:dino.position.x+(Math.random()-0.5)*20,z:dino.position.z+(Math.random()-0.5)*20}}
-    dino.wanderT-=dt;tX=dino.wanderTgt.x;tZ=dino.wanderTgt.z;speed=1.4;
-  } else if(dino.state==='alert'){
-    dino.alertT+=dt;speed=0;
-    const ax=dino.lastSeenX-dino.position.x,az=dino.lastSeenZ-dino.position.z;
-    dino.heading+=wrapAngle(Math.atan2(ax,az)-dino.heading)*Math.min(1,dt*3);
-    if(dino.alertT>2.5)dino.state=heard?'chase':'idle';
-  } else if(dino.state==='chase'){
-    tX=dino.lastSeenX;tZ=dino.lastSeenZ;speed=dino.angry?8:6;
-    if(dist<2.5&&distY<2.5&&myKo<=0){attackPlayer();dino.state='recover';dino.recoverT=4}
-    if(!seen&&U.uT.value-dino.lastSeenT>5)dino.state='idle';
-  } else if(dino.state==='recover'){
-    dino.recoverT-=dt;dino.spd=0;
-    if(dino.recoverT<=0)dino.state='chase';
-    dino.root.position.copy(dino.position);dino.root.rotation.y=dino.heading;
-    animDino(dt);return;
-  } else if(dino.state==='flee'){
-    const awayH=Math.atan2(dino.position.x-P.x,dino.position.z-P.z);
-    let fleeH=awayH,found=false;
-    for(let off=0;off<=2.0&&!found;off+=0.4){
-      for(const s of [1,-1]){
-        const ah=awayH+off*s;
-        const fx=dino.position.x+Math.sin(ah)*12,fz=dino.position.z+Math.cos(ah)*12;
-        if(H(fx,fz)>-0.35){fleeH=ah;found=true;break}
+    if(tsunami.t>=TSU_DUR_PULL){
+      tsunami.phase='wave';tsunami.t=0;
+      addMsg('\u2726','a wall of water approaches!',.05);
+      sfx('launch');shake(.6);
+    }
+  } else if(tsunami.phase==='wave'){
+    const speed=48;
+    wv.g.position.x+=tsunami.dirX*speed*dt;
+    wv.g.position.z+=tsunami.dirZ*speed*dt;
+    const wp=wv.g.position;
+    const distP=Math.hypot(P.x-wp.x,P.z-wp.z);
+    const riseK=Math.max(0,1-Math.min(1,distP/80));
+    water.position.y=-10+14*riseK;
+    wU.uTsunPull.value=Math.max(0,1-riseK*0.9);
+    const strength=Math.max(0,1-Math.min(1,distP/180));
+    wU.uTsunWave.value=strength;
+    wU.uTsunCenter.value.set(wp.x,wp.z);
+    wU.uTsunRadius.value=180*strength;
+    for(const c of pool){
+      if(c.cx===1e9)continue;
+      const cx=c.cx*CS,cz=c.cz*CS;
+      const relx=cx-wp.x,relz=cz-wp.z;
+      const dotAlong=relx*tsunami.dirX+relz*tsunami.dirZ;
+      const dotSide=relx*(-tsunami.dirZ)+relz*(tsunami.dirX);
+      if(Math.abs(dotAlong)<CS*0.9&&Math.abs(dotSide)<220)knockChunkTrees(c);
+    }
+    if(!tsunami.impacted){
+      const relx=P.x-wp.x,relz=P.z-wp.z;
+      const dotAlong=relx*tsunami.dirX+relz*tsunami.dirZ;
+      const dotSide=relx*(-tsunami.dirZ)+relz*(tsunami.dirX);
+      if(Math.abs(dotAlong)<8&&Math.abs(dotSide)<180){
+        tsunami.impacted=true;
+        const inShield=playerInShield();
+        if(inShield){
+          addMsg('\u2726','the force field holds',.15);
+          sfx('orb');shake(.25);
+        } else if(myKo<=0 && !RG.on){
+          myKo=2.2;sfx('splash');shake(1.0);
+          const kd=Math.hypot(relx,relz)||1;
+          P.v.x=relx/kd*18;P.v.y=8;P.v.z=relz/kd*18;
+          addMsg('\u00b7','The wave washes you away!',.05);
+        }
       }
     }
-    tX=dino.position.x+Math.sin(fleeH)*20;tZ=dino.position.z+Math.cos(fleeH)*20;speed=9;
-    if(dist>60){despawnDino();return}
+    const dxp=P.x-wp.x,dzp=P.z-wp.z;
+    const passed=dxp*tsunami.dirX+dzp*tsunami.dirZ;
+    if(passed<-160){tsunami.phase='settle';tsunami.t=0}
+  } else if(tsunami.phase==='settle'){
+    const p=Math.min(1,tsunami.t/5);
+    water.position.y=4-4*p;
+    wU.uTsunPull.value=0;
+    wU.uTsunWave.value=Math.max(0,0.6*(1-p));
+    wU.uTsunRadius.value=Math.max(0,wU.uTsunRadius.value-dt*60);
+    for(const s of tsuShields.values()){
+      s.domeMat.opacity=Math.max(0,s.domeMat.opacity-dt*0.15);
+      s.ringMat.opacity=Math.max(0,s.ringMat.opacity-dt*0.35);
+    }
+    if(tsunami.t>=5)endTsunami();
   }
-  dino.spd=speed;
-  if(speed>0&&tX!==null){
-    const tdx=tX-dino.position.x,tdz=tZ-dino.position.z;
-    const tHead=Math.atan2(tdx,tdz);
-    dino.heading+=wrapAngle(tHead-dino.heading)*Math.min(1,dt*3);
-    const nx=dino.position.x+Math.sin(dino.heading)*speed*dt;
-    const nz=dino.position.z+Math.cos(dino.heading)*speed*dt;
-    if(H(nx,nz)>-0.35){dino.position.x=nx;dino.position.z=nz}
-    else{for(const a of [0.6,-0.6,1.2,-1.2,2.0,-2.0]){
-      const h2=dino.heading+a;
-      const nx2=dino.position.x+Math.sin(h2)*speed*dt;
-      const nz2=dino.position.z+Math.cos(h2)*speed*dt;
-      if(H(nx2,nz2)>-0.35){dino.position.x=nx2;dino.position.z=nz2;dino.heading=h2;break}
-    }}
-    dino.position.y=H(dino.position.x,dino.position.z);
-  }
-  const bob=Math.abs(Math.sin(U.uT.value*(speed>0.1?speed*1.4:0.6)))*0.06*(speed*0.2+0.3);
-  dino.root.position.set(dino.position.x,dino.position.y+bob,dino.position.z);
-  dino.root.rotation.y=dino.heading;
-  animDino(dt);
 }
 
 function spawnAllPads(){
   padReady=true;
-  spawnDino();
   for(const c of pool)if(c.cx!==1e9)trySpawnPad(c.cx*CS,c.cz*CS);
   (function spawnDebugPad(){const px=P.x, pz=P.z-6, py=H(px,pz);const g=new T.Group();g.position.set(px,py+.25,pz);
   {const e=.7;const nx=H(px-e,pz)-H(px+e,pz);const nz=H(px,pz-e)-H(px,pz+e);
