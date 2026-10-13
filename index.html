@@ -644,6 +644,102 @@ function tryMergeBurgers(){
     return;
   }
 }
+// PORTAL: a resting burger + a resting rock fuse into a portal that teleports you somewhere random
+let portalCharge=null, portalA=null, portalB=null, portalTeleCd=0, wasInPortalB=false;
+function mkPortalMesh(){
+  const g=new T.Group();
+  const ring=new T.Mesh(new T.TorusGeometry(1.15,.16,10,32),new T.MeshPhongMaterial({color:0xb08cff,emissive:0x6a3add,emissiveIntensity:.9,shininess:140}));
+  g.add(ring);
+  const inner=new T.Mesh(new T.CircleGeometry(1.05,32),new T.MeshBasicMaterial({color:0x9a7add,transparent:true,opacity:.6,side:T.DoubleSide,blending:T.AdditiveBlending,depthWrite:false,fog:false}));
+  g.add(inner);
+  const hl=new T.Sprite(new T.SpriteMaterial({map:halo,color:0xb08cff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.85}));
+  hl.scale.set(4.5,4.5,1);g.add(hl);
+  g.userData={ring,inner,hl};
+  return g;
+}
+function spawnPortal(x,y,z){const g=mkPortalMesh();g.position.set(x,y,z);g.userData.born=U.uT.value;g.scale.setScalar(.01);scene.add(g);return g}
+function destroyPortal(g){if(!g)return;scene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()})}
+function abortPortalCharge(){if(!portalCharge)return;const c=portalCharge;c.a.scale.setScalar(c.aScale);c.b.scale.setScalar(c.bScale);c.a.position.copy(c.ap);c.b.position.copy(c.bp);portalCharge=null}
+function tryPortalCraft(dt){
+  if(portalCharge){
+    const c=portalCharge;
+    if(c.t<2){
+      if(c.a.u.held||c.a.u.remoteHeld||c.b.u.held||c.b.u.remoteHeld||c.a.position.distanceToSquared(c.ap)>.5||c.b.position.distanceToSquared(c.bp)>.5){abortPortalCharge();return}
+    }
+    c.t+=dt;
+    if(c.t>=2){
+      const sp=Math.min(1,(c.t-2)/.6);
+      const ease=sp*sp*(3-2*sp);
+      const sc=1-ease;
+      c.a.position.lerpVectors(c.ap,c.mid,ease);
+      c.b.position.lerpVectors(c.bp,c.mid,ease);
+      c.a.scale.setScalar(c.aScale*sc);
+      c.b.scale.setScalar(c.bScale*sc);
+      if(sp>=1){
+        c.a.scale.setScalar(c.aScale);c.b.scale.setScalar(c.bScale);
+        c.a.u.v.set(0,0,0);c.b.u.v.set(0,0,0);
+        c.a.u.rest=true;c.b.u.rest=true;
+        place(c.a);place(c.b);
+        const px=c.mid.x,pz=c.mid.z,py=H(px,pz)+1.15;
+        portalA=spawnPortal(px,py,pz);
+        sfx('disc');ripple(px,pz,1.8);shake(.22);
+        addMsg('✦','a portal opens...',.75);
+        portalCharge=null;
+      }
+    }
+    return;
+  }
+  if(portalA)return;
+  for(const a of rocks){
+    if(a.u.kind!==6||a.u.big||a.u.held||a.u.remoteHeld||!a.u.rest)continue;
+    for(const b of rocks){
+      if(b===a||b.u.kind!==8||b.u.held||b.u.remoteHeld||!b.u.rest)continue;
+      const dx=a.position.x-b.position.x,dy=a.position.y-b.position.y,dz=a.position.z-b.position.z;
+      if(dx*dx+dy*dy+dz*dz<2.25){
+        const mx=(a.position.x+b.position.x)/2,my=(a.position.y+b.position.y)/2,mz=(a.position.z+b.position.z)/2;
+        portalCharge={a,b,t:0,ap:a.position.clone(),bp:b.position.clone(),mid:new T.Vector3(mx,my,mz),aScale:a.scale.x,bScale:b.scale.x};
+        return;
+      }
+    }
+  }
+}
+function doPortalTeleport(){
+  let tx=P.x,ty=H(P.x,P.z),tz=P.z,ok=false;
+  for(let i=0;i<80;i++){
+    const ang=Math.random()*6.283,r=80+Math.random()*400;
+    const x=P.x+Math.cos(ang)*r,z=P.z+Math.sin(ang)*r;
+    const h=H(x,z);
+    if(h>1&&h<18&&slope(x,z,h)<.5&&!inPit(x,z)){tx=x;ty=h;tz=z;ok=true;break}
+  }
+  if(!ok){const ang=Math.random()*6.283,r=60+Math.random()*200;tx=P.x+Math.cos(ang)*r;tz=P.z+Math.sin(ang)*r;ty=Math.max(H(tx,tz),1)}
+  P.x=tx;P.y=ty+.05;P.z=tz;P.v.set(0,0,0);
+  destroyPortal(portalA);portalA=null;
+  portalB=spawnPortal(tx,ty+1.15,tz);
+  wasInPortalB=true;portalTeleCd=1.2;
+  sfx('launch');ripple(tx,tz,2.0);shake(.3);
+  addMsg('✦','you emerge somewhere else',.75);
+}
+function portalTick(dt){
+  if(portalTeleCd>0)portalTeleCd-=dt;
+  const t=U.uT.value;
+  for(const pg of [portalA,portalB]){
+    if(!pg)continue;
+    const u=pg.userData;
+    u.ring.rotation.z=t*1.6;
+    u.inner.material.opacity=.5+.15*Math.sin(t*4);
+    u.hl.material.opacity=.7+.2*Math.sin(t*3);
+    if(u.born!==undefined){const bs=Math.min(1,(t-u.born)*3.5);pg.scale.setScalar(bs);if(bs>=1)delete u.born}
+  }
+  if(portalA&&portalTeleCd<=0){
+    const dx=P.x-portalA.position.x,dz=P.z-portalA.position.z;
+    if(dx*dx+dz*dz<1.44&&Math.abs(P.y-(portalA.position.y-1.15))<2.5)doPortalTeleport();
+  }
+  if(portalB){
+    const dx=P.x-portalB.position.x,dz=P.z-portalB.position.z;
+    if(dx*dx+dz*dz<1.44)wasInPortalB=true;
+    else if(wasInPortalB){destroyPortal(portalB);portalB=null;wasInPortalB=false;addMsg('·','the portal closes',.75);sfx('whoosh')}
+  }
+}
 const rings=[...Array(5)].map(()=>{const m=new T.Mesh(new T.RingGeometry(.3,.4,24).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false,opacity:.6}));m.visible=false;m.t=9;scene.add(m);return m});let ri=0;
 function splash(x,z){sfx('splash');ripple(x,z,1.3);{const d=Math.hypot(x-P.x,z-P.z);if(d<12)shake(.12*(1-d/12))}const r=rings[ri++%5];r.position.set(x,.06,z);r.t=0;r.visible=true;r.material.color.setHex(0xffffff)}
 // SKIP: new skipFx for visual/audio feedback on each bounce
@@ -1400,6 +1496,8 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
   if(i===fr%rocks.length&&(u.rest||u.fl)&&r.position.distanceToSquared(P)>3600)place(r);
   if(u.kind===4&&r.position.distanceToSquared(P)<3){orbs++;sfx('orb');hud('orb!');place(r)}}
 if(inGame&&!RG.on){mergeT-=dt;if(mergeT<=0){mergeT=.35;tryMergeBurgers()}}
+if(inGame&&!RG.on){tryPortalCraft(dt)}
+portalTick(dt)
 for(const o of activeOres){if(o.flash>0){o.flash=Math.max(0,o.flash-dt*4);o.sp.material.opacity=.35+o.flash*.55;o.sp.scale.set(1.1+o.flash*1.1,1.1+o.flash*1.1,1)}
   o.m.rotation.y+=dt*o.spin;if(Math.abs(o.m.rotation.z)>.002)o.m.rotation.z*=Math.max(0,1-dt*7);else o.m.rotation.z=0}
 for(const r of rings)if(r.visible){r.t+=dt;r.scale.setScalar(1+r.t*7);r.material.opacity=Math.max(0,.55-r.t*.7);if(r.t>.9)r.visible=false}
