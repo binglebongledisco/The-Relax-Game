@@ -466,9 +466,17 @@ cl(.03,.03,2.4,5,45.8,iron);bx(1,.05,.05,0,46.6,0,iron);return mergeParts(P)})()
 const lighthouseM=new T.MeshLambertMaterial({vertexColors:true});
 const lhPool=[];const LH_MAX=20;
 const PAD_CELL=64;
+function _padPOI(px,pz,rad){const ix=Math.floor(px/CL),iz=Math.floor(pz/CL);const r2=rad*rad;
+  for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){const c=cave((ix+dx+.5)*CL,(iz+dz+.5)*CL);if(!c)continue;
+    const ddx=c.x-px,ddz=c.z-pz;if(ddx*ddx+ddz*ddz<r2)return c}
+  return null}
+function _padLH(px,pz,rad){const gx=Math.floor(px/LH_CELL),gz=Math.floor(pz/LH_CELL);const r2=rad*rad;
+  for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){const s=lhSite(gx+dx,gz+dz);if(!s)continue;
+    const ddx=s.x-px,ddz=s.z-pz;if(ddx*ddx+ddz*ddz<r2)return s}
+  return null}
 function padSite(gx,gz){const k=gx*7919+gz*104729;const c=PADS_CACHE.get(k);if(c!==undefined)return c;let s=null;
   if(hs(gx*3.7+41,gz*5.3+17)<=.5){const cx=gx*PAD_CELL+PAD_CELL/2+(hs(gx*7.1,gz*2.9)-.5)*22;const cz=gz*PAD_CELL+PAD_CELL/2+(hs(gx*11.3,gz*8.7)-.5)*22;const h=H(cx,cz);
-    if(h>1.2&&h<18)s={x:cx,z:cz,y:h}}
+    if(h>1.2&&h<18&&!inPit(cx,cz)&&!_padPOI(cx,cz,15)&&!_padLH(cx,cz,20))s={x:cx,z:cz,y:h}}
   if(PADS_CACHE.size>8192)PADS_CACHE.clear();PADS_CACHE.set(k,s);return s}
 const padG=(()=>{const P=[];
 P.push([new T.CylinderGeometry(2.2,2.4,.35,20),new M4(),[.22,.25,.32],0,()=>1]);
@@ -482,6 +490,8 @@ let padReady=false;
 function trySpawnPad(ox,oz){if(!padReady)return;const gx=Math.floor(ox/PAD_CELL),gz=Math.floor(oz/PAD_CELL);const site=padSite(gx,gz);if(!site)return;
   const gk=gx+','+gz;for(const p of padPool)if(p.userData.gk===gk)return;
   const g=new T.Group();g.position.set(site.x,site.y+.18,site.z);
+  {const e=.7;const nx=H(site.x-e,site.z)-H(site.x+e,site.z);const nz=H(site.x,site.z-e)-H(site.x,site.z+e);
+   const n=new V3(nx,2*e,nz).normalize();g.quaternion.setFromUnitVectors(new V3(0,1,0),n);}
   const m=new T.Mesh(padG,padM);m.castShadow=true;g.add(m);
   const sp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0x66ddff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.45}));
   sp.position.y=.55;sp.scale.set(3.2,3.2,1);g.add(sp);
@@ -1353,7 +1363,10 @@ rd.render(scene,cam);reflectPass(uw)}
 function spawnAllPads(){
   padReady=true;
   for(const c of pool)if(c.cx!==1e9)trySpawnPad(c.cx*CS,c.cz*CS);
-  (function spawnDebugPad(){const px=P.x, pz=P.z-6, py=H(px,pz);const g=new T.Group();g.position.set(px,py+.25,pz);const m=new T.Mesh(padG,padM);m.castShadow=true;g.add(m);const sp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0x66ddff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.9}));sp.position.y=.55;sp.scale.set(5,5,1);g.add(sp);scene.add(g);g.userData.gk='debug-'+Math.random().toString(36).slice(2,6);g.userData.cx=px;g.userData.cz=pz;g.userData.cy=py;g.userData.cooldown=0;padPool.push(g);console.log('[PAD-DEBUG] at',px.toFixed(1),py.toFixed(1),pz.toFixed(1));})();
+  (function spawnDebugPad(){const px=P.x, pz=P.z-6, py=H(px,pz);const g=new T.Group();g.position.set(px,py+.25,pz);
+  {const e=.7;const nx=H(px-e,pz)-H(px+e,pz);const nz=H(px,pz-e)-H(px,pz+e);
+   const n=new V3(nx,2*e,nz).normalize();g.quaternion.setFromUnitVectors(new V3(0,1,0),n);}
+  const m=new T.Mesh(padG,padM);m.castShadow=true;g.add(m);const sp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0x66ddff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.9}));sp.position.y=.55;sp.scale.set(5,5,1);g.add(sp);scene.add(g);g.userData.gk='debug-'+Math.random().toString(36).slice(2,6);g.userData.cx=px;g.userData.cz=pz;g.userData.cy=py;g.userData.cooldown=0;padPool.push(g);console.log('[PAD-DEBUG] at',px.toFixed(1),py.toFixed(1),pz.toFixed(1));})();
 }
 spawnAllPads();
 
