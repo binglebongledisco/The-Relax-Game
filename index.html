@@ -1332,19 +1332,20 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
   if(!r.visible)r.visible=true;
   if(u.held){if(!handR.visible){me.haR.getWorldPosition(r.position);r.position.y-=.05}continue}
   if(!u.rest){const py=r.position.y,gg=H(r.position.x,r.position.z),inW=py<0&&gg<0;u.v.y-=(inW?(u.fl?-7:5):18)*dt;if(inW)u.v.multiplyScalar(1-2.5*dt);
-    {const nS=Math.min(8,Math.max(1,Math.ceil(u.v.length()*dt/.2))),sd=dt/nS;for(let z2=0;z2<nS;z2++){r.position.addScaledVector(u.v,sd);hitCol(r)}}r.rotation.x+=u.v.length()*dt*.4;r.rotation.z+=u.v.x*dt*.3;
-    // TRAMP: items and rocks bounce off launch pads too
-    if(u.padCd>0)u.padCd-=dt;
-    if(u.v.y<0&&(u.padCd||0)<=0)for(const pad of padPool){
-      const pdx=r.position.x-pad.userData.cx,pdz=r.position.z-pad.userData.cz;
-      if(pdx*pdx+pdz*pdz>5.76)continue;
-      if(r.position.y<pad.userData.cy-.4||r.position.y>pad.userData.cy+2)continue;
-      u.padCd=1.2;u.rest=false;
-      const _pu=new T.Vector3(0,1,0).applyQuaternion(pad.quaternion);
-      u.v.x=u.v.x*.35+_pu.x*16;u.v.y=_pu.y*20;u.v.z=u.v.z*.35+_pu.z*16;
-      sfx('launch');ripple(r.position.x,r.position.z,.6);
-      break;
-    }
+    {const nS=Math.min(8,Math.max(1,Math.ceil(u.v.length()*dt/.2))),sd=dt/nS;for(let z2=0;z2<nS;z2++){r.position.addScaledVector(u.v,sd);hitCol(r);
+      // TRAMP: items/rocks bounce off launch pads (checked every substep so fast movers can't skip)
+      if((u.padCd=Math.max(0,(u.padCd||0)-sd))<=0)for(const pad of padPool){
+        const qdx=r.position.x-pad.userData.cx,qdz=r.position.z-pad.userData.cz;
+        if(qdx*qdx+qdz*qdz>6.25)continue;
+        const qdy=r.position.y-pad.userData.cy;
+        if(qdy<-1.5||qdy>3)continue;
+        u.padCd=1.0;u.rest=false;u.skip=0;
+        const _pu=new T.Vector3(0,1,0).applyQuaternion(pad.quaternion);
+        u.v.x=u.v.x*.4+_pu.x*16;u.v.y=Math.max(3,_pu.y*20);u.v.z=u.v.z*.4+_pu.z*16;
+        sfx('launch');ripple(r.position.x,r.position.z,.6);
+        break;
+      }
+    }}r.rotation.x+=u.v.length()*dt*.4;r.rotation.z+=u.v.x*dt*.3;
     if(u.thrownBy && u.thrownBy!=='me' && myKo<=0 && rm && u.thrownBy!==rm.id){const dx=r.position.x-P.x,dy=r.position.y-(P.y+1.0),dz=r.position.z-P.z;
       if(dx*dx+dy*dy+dz*dz<1.2){myKo=2.0;sfx('ko');shake(.8);if(rm)rm.emit('hit',{by:u.thrownBy});addMsg('·','You were knocked over by '+nameOf(u.thrownBy)+'!',.02);u.v.multiplyScalar(0.3)}}
     // SKIP: rock skipping logic - replaces the old splash-on-water check
