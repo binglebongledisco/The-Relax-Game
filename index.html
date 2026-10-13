@@ -487,6 +487,7 @@ return mergeParts(P)})();
 const padM=new T.MeshLambertMaterial({vertexColors:true});
 const padPool=[];const PAD_MAX=999999;
 let padReady=false;
+let padAchieved=false;
 function trySpawnPad(ox,oz){if(!padReady)return;const gx=Math.floor(ox/PAD_CELL),gz=Math.floor(oz/PAD_CELL);const site=padSite(gx,gz);if(!site)return;
   const gk=gx+','+gz;for(const p of padPool)if(p.userData.gk===gk)return;
   const g=new T.Group();g.position.set(site.x,site.y+.18,site.z);
@@ -1268,6 +1269,10 @@ else{
       sfx('launch');
       shake(.35);
       ripple(P.x,P.z,1.6);
+      if(!padAchieved){padAchieved=true;try{localStorage.setItem('rlx-pad-achieved','1')}catch(e){}
+        const _e=document.getElementById('bn');if(_e){_e.innerHTML='<small>achievement</small>boing';_e.classList.add('on');clearTimeout(bt);bt=setTimeout(()=>_e.classList.remove('on'),5200)}
+        addMsg('✦','achievement: boing',1.0);
+      }
       break;
     }
   }
