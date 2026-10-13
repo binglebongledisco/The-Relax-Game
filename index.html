@@ -696,7 +696,7 @@ else if(c.t===5){
     const hs2=t.s*.5, blocks=Math.max(4,Math.round(t.s/4));
     for(let side=0;side<4;side++){
       for(let k=0;k<blocks;k++){
-        const tC=((k+.5)/blocks-.5), w=t.s/blocks*1.02, hgt=1.2;
+        const tC=((k+.5)/blocks-.5), w=t.s/blocks*1.02, hgt=t.h/3;
         let px,pz,rot;
         if(side===0){px=tC*t.s;pz=-hs2;rot=0;}
         else if(side===1){px=tC*t.s;pz=hs2;rot=0;}
@@ -714,7 +714,8 @@ else if(c.t===5){
     }
     
   }
-  S.push([new T.ConeGeometry(7,5,4).rotateY(Math.PI/4),mt(0,26+PY.by0,0),[.80,.74,.60],.04,SH]);
+  S.push([new T.BoxGeometry(12,12,.6),mt(0,26+PY.by0,0),[.80,.74,.60],.03,SH]);
+  S.push([new T.ConeGeometry(6,6,4).rotateY(Math.PI/4),mt(0,29+PY.by0,0),[.78,.72,.58],.04,SH]);
   const chamberY=c.y+0.3;
   for(const w of[{nx:0,nz:-8,rot:0},{nx:0,nz:8,rot:0},{nx:-8,nz:0,rot:1.5708},{nx:8,nz:0,rot:1.5708}]){
     for(let k=0;k<8;k++){
@@ -727,6 +728,7 @@ else if(c.t===5){
     }
   }
   S.push([new T.CylinderGeometry(11,11,.3,24),mt(0,chamberY-.15,0),[.42,.38,.32],.04,SH]);
+  S.push([new T.BoxGeometry(18,18,.6),mt(0,chamberY+4.4,0),[.60,.54,.44],.03,SH]);
   for(const h of[{a:0,len:14},{a:Math.PI/2,len:14},{a:-Math.PI/2,len:14},{a:Math.PI,len:6}]){
     const ca=Math.cos(h.a),sa=Math.sin(h.a),px2=-sa,pz2=ca;
     const nblk=Math.max(6,Math.round(h.len/1.4));
