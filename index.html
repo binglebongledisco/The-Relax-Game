@@ -1288,7 +1288,7 @@ U.uT.value+=dt;PDT=dt;
 if(HIGHP!=='highp'&&U.uT.value>=UT_WRAP){U.uT.value-=UT_WRAP;for(let i=0;i<WR.length;i++)WR[i].z-=UT_WRAP;}
 if(joy!==null&&!downPtrs.has(joy))releasePtr(joy);
 if(look!==null&&!downPtrs.has(look))releasePtr(look);
-if(!inGame){home(dt);return}if(rm)updateRemotes(dt);
+if(!inGame){home(dt);return}if(!pyramidPlaced)placePyramidNow();if(rm)updateRemotes(dt);
 if(pulledBy && performance.now()-lastPullT>800)pulledBy=null;
 else if(pulledBy && (Math.hypot(mv.x,mv.y)>0.35||jump) && performance.now()-pullStartT>3000)pulledBy=null;
 if(myKo>0){myKo=Math.max(0,myKo-dt);if(myKo===0)hud('back up')}
