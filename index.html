@@ -1675,6 +1675,7 @@ void main(){
   const skirt=new T.Mesh(new T.PlaneGeometry(440,10),new T.MeshBasicMaterial({color:0xdff6ff,transparent:true,opacity:.55,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,fog:false}));
   skirt.position.y=1;skirt.rotation.x=-Math.PI/2;
   g.add(skirt);
+  g.visible=false;
   return {g,mat,capMat};
 }
 function startTsunami(x,z){
@@ -1780,6 +1781,7 @@ function tsunamiTick(dt){
     }
     if(tsunami.t>=TSU_DUR_PULL){
       tsunami.phase='wave';tsunami.t=0;
+      if(tsunami.wave)tsunami.wave.g.visible=true;
       addMsg('\u2726','a wall of water approaches!',.05);
       sfx('launch');shake(.6);
     }
