@@ -14,6 +14,7 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 #lb{display:none;right:max(14px,env(safe-area-inset-right));bottom:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px);font-size:clamp(10px,1.6vmin,13px)}
 #rb{display:none;right:calc(max(14px,env(safe-area-inset-right)) + clamp(84px,15vmin,108px));bottom:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px);font-size:clamp(10px,1.6vmin,13px);background:radial-gradient(circle at 35% 30%,#7ecc85,#1f9b1f);color:#0b3a0b;font-weight:900}
 #rb.on{background:radial-gradient(circle at 35% 30%,#eec06a,#d97a2a);color:#3a1160}
+#ebt{display:none;right:max(14px,env(safe-area-inset-right));bottom:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px);font-size:clamp(10px,1.6vmin,13px);background:radial-gradient(circle at 35% 30%,#ffd76a,#d97a2a);color:#3a1160;font-weight:900}
 #st{display:none;position:fixed;left:max(8px,env(safe-area-inset-left));top:max(8px,env(safe-area-inset-top));color:#fff;font:600 11px system-ui;text-shadow:0 1px 4px #000a;background:#0009;padding:5px 10px;border-radius:12px;max-width:260px;line-height:1.3;z-index:8;pointer-events:none;white-space:pre-line;border:1px solid #ffffff22;opacity:.94}
 #eb{display:none;position:fixed;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));flex-direction:row;gap:clamp(3px,.6vmin,5px);align-items:center;background:#0007;padding:clamp(4px,.8vmin,6px);border-radius:24px;border:1px solid #fff4;z-index:4}
 #eb i{font-style:normal;display:flex;align-items:center;justify-content:center;width:clamp(32px,5.4vmin,42px);height:clamp(32px,5.4vmin,42px);background:#ffffff15;border:1px solid #fff5;border-radius:50%;font-size:clamp(15px,2.8vmin,20px);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:background .15s,border-color .15s;line-height:1}
@@ -154,7 +155,7 @@ body.ig::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:2;b
 </style></head><body>
 <canvas id="c"></canvas><div id="ov"></div>
 <div id="jr"><div id="jk"></div></div>
-<button id="jb">Up</button><button id="gb">Grab</button><button id="lb">Leave boat</button><button id="rb">Run</button>
+<button id="jb">Up</button><button id="gb">Grab</button><button id="lb">Leave boat</button><button id="rb">Run</button><button id="ebt">Eat</button>
 <div id="hint">Left thumb walks, right thumb looks. Tap Run to toggle walking and running. Grab rocks, crystals, ducks, beach balls and mushrooms; hold to charge, release to throw. Throw rocks flat and fast across water to skip them. Stand next to a friend and press Grab to pull them around. Wade into a pond and look down to dive. Walk into caves and ruins to discover them — glowing ore nodes are embedded in the walls. Two people can ride the boat — walk up to a seat. Press R for ragdoll.</div>
 <div id="home">
   <div class="hc">
@@ -594,7 +595,7 @@ function leaveBoat(){if(!inBoat)return;
   const rx=Math.cos(ya),rz=-Math.sin(ya);P.x+=rx*4.2;P.z+=rz*4.2;const gg=H(P.x,P.z);P.y=Math.max(gg,0.05);P.v.set(0,4,0);
   const lb=document.getElementById('lb');if(lb)lb.style.display='none'}
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
-const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null;
+const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
 // SKIP: place() now also resets skip counter when a rock is (re)spawned
 function place(m){const a=sRng()*6.283,r=8+sRng()*48,x=P.x+Math.cos(a)*r,z=P.z+Math.sin(a)*r;m.position.set(x,H(x,z)+m.u.r*.5,z);m.u.rest=true;m.u.v.set(0,0,0);m.u.skip=0;if(m.u.fl&&m.position.y<0){m.position.y=0;m.u.rest=false}}
 // SKIP: add skip:0 to rock data
@@ -608,10 +609,11 @@ g.setAttribute('color',new T.Float32BufferAttribute(cl,3));m=new T.Mesh(g,PH(0xf
 else if(k==2){m=new T.Group();const cap=new T.Mesh(new T.SphereGeometry(.2,12,8,0,6.283,0,1.6),PH(0xc4322b,{side:T.DoubleSide})),sm=new T.Mesh(new T.CylinderGeometry(.05,.07,.2,8),PH(0xeee3cc));cap.position.y=.1;m.add(cap,sm);b=.15}
 else if(k==3){m=new T.Mesh(new T.SphereGeometry(.22,14,10).scale(1,.92,1),PH(0xc2271f,{shininess:140}));r=.22;b=.5}
 else if(k==4){const c=hue();m=new T.Mesh(new T.SphereGeometry(.16,10,8),new T.MeshBasicMaterial({color:c}));m.add(new T.Mesh(new T.SphereGeometry(.3,8,6),new T.MeshBasicMaterial({color:c,transparent:true,opacity:.15,blending:T.AdditiveBlending,depthWrite:false})));r=.2;b=.9}
+else if(k==6){m=new T.Group();const bB=new T.Mesh(new T.CylinderGeometry(.24,.24,.10,14),PH(0xe0a03a,{shininess:22})),pt2=new T.Mesh(new T.CylinderGeometry(.24,.24,.09,14),PH(0x5a3520,{shininess:8})),bT=new T.Mesh(new T.SphereGeometry(.24,14,8,0,6.283,0,Math.PI/2),PH(0xe0a03a,{shininess:22}));bB.position.y=-.055;pt2.position.y=.045;bT.position.y=.09;m.add(bB,pt2,bT);r=.28;b=.4;fl=0}
 else{m=new T.Group();const y=PH(0xffd21f,{shininess:120}),bd=new T.Mesh(new T.SphereGeometry(.22,12,8).scale(1,.8,1.3),y),hd=new T.Mesh(new T.SphereGeometry(.13,10,8),y),bk=new T.Mesh(new T.ConeGeometry(.05,.1,6).rotateX(1.5708),PH(0xff7a1a));hd.position.set(0,.2,.17);bk.position.set(0,.19,.3);m.add(bd,hd,bk);r=.25;fl=1}
 // SKIP: add skip:0 to item data
 m.traverse(o=>o.castShadow=true);m.u={r,b,fl,kind:k,v:new V3(),rest:true,held:false,remoteHeld:null,idx:rocks.length,skip:0};place(m);rocks.push(m);scene.add(m)}
-for(let i=0;i<48;i++)mkItem(i%6);
+for(let i=0;i<48;i++)mkItem(i%6);for(let i=0;i<10;i++)mkItem(6);
 const rings=[...Array(5)].map(()=>{const m=new T.Mesh(new T.RingGeometry(.3,.4,24).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false,opacity:.6}));m.visible=false;m.t=9;scene.add(m);return m});let ri=0;
 function splash(x,z){sfx('splash');ripple(x,z,1.3);{const d=Math.hypot(x-P.x,z-P.z);if(d<12)shake(.12*(1-d/12))}const r=rings[ri++%5];r.position.set(x,.06,z);r.t=0;r.visible=true;r.material.color.setHex(0xffffff)}
 // SKIP: new skipFx for visual/audio feedback on each bounce
@@ -775,7 +777,7 @@ else if(k==='ko'){tone(120,.6,'sine',.55,40);sweep(900,150,.4,.4,.8);tone(880,1,
 else if(k==='click'){tone(2200,.03,'square',.1);tone(1400,.035,'square',.09,0,.05)}
 else if(k==='thud'){tone(90,.2,'sine',.5*t,42);nz(.12,450,.3*t,.7)}
 else if(k==='launch'){sweep(200,1800,.25,.4,1.1);tone(880,.25,'sine',.22,220,.02);tone(220,.4,'triangle',.3,110,.05)}
-else if(k==='boing')tone(180,.35,'sine',.3,720);else return 0;return 1}
+else if(k==='eat'){nz(.07,700,.35,1.6);tone(190,.1,'sine',.22,80,.03);setTimeout(()=>nz(.07,500,.3,1.6),110)}else if(k==='boing')tone(180,.35,'sine',.3,720);else return 0;return 1}
 function sfx(k,t){if(!ac)return;if(sfx2(k,t))return;if(k==='jump'){tone(340,.22,'sine',.18,720)}else if(k==='grab')tone(520,.12,'sine',.22,780);else if(k==='whoosh')nz(.3,900,.32,.6);else if(k==='splash')nz(.45,1500,.36,.5);
 else if(k==='orb'){tone(880,.25,'sine',.24);tone(1320,.35,'sine',.2,0,.08)}else if(k==='ko'){tone(140,.5,'sine',.5,50);nz(.3,300,.4,.7)}
 else if(k==='swing')nz(.18,1200,.22,.8);else if(k==='pick'){nz(.08,2600,.38,2);tone([700,900,1300,1800][t],.16,'triangle',.2)}
