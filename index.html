@@ -467,7 +467,7 @@ const lighthouseM=new T.MeshLambertMaterial({vertexColors:true});
 const lhPool=[];const LH_MAX=20;
 const PAD_CELL=64;
 function padSite(gx,gz){const k=gx*7919+gz*104729;const c=PADS_CACHE.get(k);if(c!==undefined)return c;let s=null;
-  if(hs(gx*3.7+41,gz*5.3+17)<=.28){const cx=gx*PAD_CELL+PAD_CELL/2+(hs(gx*7.1,gz*2.9)-.5)*22;const cz=gz*PAD_CELL+PAD_CELL/2+(hs(gx*11.3,gz*8.7)-.5)*22;const h=H(cx,cz);
+  if(hs(gx*3.7+41,gz*5.3+17)<=.5){const cx=gx*PAD_CELL+PAD_CELL/2+(hs(gx*7.1,gz*2.9)-.5)*22;const cz=gz*PAD_CELL+PAD_CELL/2+(hs(gx*11.3,gz*8.7)-.5)*22;const h=H(cx,cz);
     if(h>1.2&&h<18)s={x:cx,z:cz,y:h}}
   if(PADS_CACHE.size>8192)PADS_CACHE.clear();PADS_CACHE.set(k,s);return s}
 const padG=(()=>{const P=[];
