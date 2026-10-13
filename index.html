@@ -477,7 +477,7 @@ P.push([new T.TorusGeometry(2.3,.12,8,24).rotateX(Math.PI/2).translate(0,.36,0),
 for(let k=0;k<4;k++){const a=k/4*6.2832;P.push([new T.CylinderGeometry(.17,.17,.5,8),mt(Math.cos(a)*1.9,.33,Math.sin(a)*1.9),[1,.85,.2],0,()=>2])}
 return mergeParts(P)})();
 const padM=new T.MeshLambertMaterial({vertexColors:true});
-const padPool=[];const PAD_MAX=24;
+const padPool=[];const PAD_MAX=999999;
 let padReady=false;
 function trySpawnPad(ox,oz){if(!padReady)return;const gx=Math.floor(ox/PAD_CELL),gz=Math.floor(oz/PAD_CELL);const site=padSite(gx,gz);if(!site)return;
   const gk=gx+','+gz;for(const p of padPool)if(p.userData.gk===gk)return;
@@ -1349,14 +1349,14 @@ if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
 else{$('gb').style.transform=''}
 if(trauma>0){trauma=Math.max(0,trauma-dt*1.4);const s=trauma*trauma,q=t*28;cam.rotation.x+=(vn(q,3.1)-.5)*.1*s;cam.rotation.y+=(vn(q,7.7)-.5)*.1*s;cam.rotation.z+=(vn(q,11.3)-.5)*.16*s;cam.position.x+=(vn(q,1.9)-.5)*.18*s;cam.position.y+=(vn(q,5.3)-.5)*.18*s}
-if(fr%10===0){const _d=document.getElementById('padDbg');if(_d)_d.textContent='PADS:'+padPool.length+' POOL:'+pool.length+' RDY:'+(padReady?1:0);}rd.render(scene,cam);reflectPass(uw)}
+rd.render(scene,cam);reflectPass(uw)}
 function spawnAllPads(){
   padReady=true;
   for(const c of pool)if(c.cx!==1e9)trySpawnPad(c.cx*CS,c.cz*CS);
   (function spawnDebugPad(){const px=P.x, pz=P.z-6, py=H(px,pz);const g=new T.Group();g.position.set(px,py+.25,pz);const m=new T.Mesh(padG,padM);m.castShadow=true;g.add(m);const sp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0x66ddff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.9}));sp.position.y=.55;sp.scale.set(5,5,1);g.add(sp);scene.add(g);g.userData.gk='debug-'+Math.random().toString(36).slice(2,6);g.userData.cx=px;g.userData.cz=pz;g.userData.cy=py;g.userData.cooldown=0;padPool.push(g);console.log('[PAD-DEBUG] at',px.toFixed(1),py.toFixed(1),pz.toFixed(1));})();
 }
 spawnAllPads();
-const padDbg=document.createElement('div');padDbg.id='padDbg';padDbg.style.cssText='position:fixed;right:8px;top:70px;background:#c00;color:#fff;padding:4px 10px;font:bold 13px monospace;z-index:9999;border-radius:6px;pointer-events:none';padDbg.textContent='PADS:'+padPool.length;document.body.appendChild(padDbg);
+
 requestAnimationFrame(loop);
 </script>
 <script>
