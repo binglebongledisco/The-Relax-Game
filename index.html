@@ -374,9 +374,9 @@ function reflectPass(uw){
   water.visible=handR.visible=lhG.visible=motes.visible=false;rd.clippingPlanes=[rPl];
   rd.setRenderTarget(RT);rd.clear();rd.render(scene,rcam);rd.setRenderTarget(null);
   rd.clippingPlanes=cp;water.visible=v0[0];handR.visible=v0[1];lhG.visible=v0[2];motes.visible=v0[3];rtOK=true;wU.uRF.value=1}
-const wU={uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.014},uR:{value:WR},uBN:{value:0},uRT:{value:RT.texture},uTM:{value:rTM},uRF:{value:0},uWave:{value:1}};
-const water=new T.Mesh(new T.PlaneGeometry(700,700,128,128).rotateX(-Math.PI/2),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,precision:HIGHP,uniforms:wU,
-vertexShader:'varying vec3 vP;uniform float uWave;void main(){vec4 w=modelMatrix*vec4(position,1.);float wx=sin(w.x*0.06+uT*0.8)+0.6*sin(w.x*0.13-uT*1.1);float wz=sin(w.z*0.05+uT*0.7)+0.6*sin(w.z*0.11-uT*0.9);w.y+=(wx+wz)*0.25*uWave;vP=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+const wU={uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.014},uR:{value:WR},uBN:{value:0},uRT:{value:RT.texture},uTM:{value:rTM},uRF:{value:0}};
+const water=new T.Mesh(new T.PlaneGeometry(700,700).rotateX(-Math.PI/2),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,precision:HIGHP,uniforms:wU,
+vertexShader:'varying vec3 vP;void main(){vec4 w=modelMatrix*vec4(position,1.);vP=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
 fragmentShader:`varying vec3 vP;uniform vec3 uSun,uCam,uFog;uniform float uT,uFd;uniform vec4 uR[10];uniform float uBN;uniform sampler2D uRT;uniform mat4 uTM;uniform float uRF;`+NZ+`
 void main(){vec2 p=vP.xz;float t=uT;
 vec2 g=vec2(sin(p.x*.8+t*1.1)+sin(p.y*1.3-t*.9)+.5*sin((p.x+p.y)*2.3+t*1.7),
