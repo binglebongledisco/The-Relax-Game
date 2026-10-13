@@ -1265,7 +1265,8 @@ else{
       if(pdx*pdx+pdz*pdz>5.76)continue;
       if(P.y<pad.userData.cy-.4||P.y>pad.userData.cy+2)continue;
       pad.userData.cooldown=1.4;
-      P.v.y=22;
+      const _padUp=new T.Vector3(0,1,0).applyQuaternion(pad.quaternion);
+      P.v.x+=_padUp.x*22;P.v.y=_padUp.y*22;P.v.z+=_padUp.z*22;
       sfx('launch');
       shake(.35);
       ripple(P.x,P.z,1.6);
