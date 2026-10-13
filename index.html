@@ -376,10 +376,10 @@ function reflectPass(uw){
   water.visible=handR.visible=lhG.visible=motes.visible=false;rd.clippingPlanes=[rPl];
   rd.setRenderTarget(RT);rd.clear();rd.render(scene,rcam);rd.setRenderTarget(null);
   rd.clippingPlanes=cp;water.visible=v0[0];handR.visible=v0[1];lhG.visible=v0[2];motes.visible=v0[3];rtOK=true;wU.uRF.value=1}
-const wU={uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.014},uR:{value:WR},uBN:{value:0},uRT:{value:RT.texture},uTM:{value:rTM},uRF:{value:0},uSkyBlack:{value:0},uSplitOn:{value:0},uSplitAnim:{value:0},uSplitA:{value:new T.Vector2(0,0)},uSplitD:{value:new T.Vector2(1,0)},uSplitLen:{value:0},uSplitW:{value:6}};
+const wU={uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.014},uR:{value:WR},uBN:{value:0},uRT:{value:RT.texture},uTM:{value:rTM},uRF:{value:0},uSkyBlack:{value:0}};
 const water=new T.Mesh(new T.PlaneGeometry(700,700).rotateX(-Math.PI/2),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,precision:HIGHP,uniforms:wU,
 vertexShader:'varying vec3 vP;void main(){vec4 w=modelMatrix*vec4(position,1.);vP=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
-fragmentShader:`varying vec3 vP;uniform vec3 uSun,uCam,uFog;uniform float uT,uFd,uSkyBlack;uniform vec4 uR[10];uniform float uBN;uniform sampler2D uRT;uniform mat4 uTM;uniform float uRF;uniform float uSplitOn,uSplitLen,uSplitW,uSplitAnim;uniform vec2 uSplitA,uSplitD;`+NZ+`
+fragmentShader:`varying vec3 vP;uniform vec3 uSun,uCam,uFog;uniform float uT,uFd,uSkyBlack;uniform vec4 uR[10];uniform float uBN;uniform sampler2D uRT;uniform mat4 uTM;uniform float uRF;`+NZ+`
 void main(){vec2 p=vP.xz;float t=uT;
 vec2 g=vec2(sin(p.x*.8+t*1.1)+sin(p.y*1.3-t*.9)+.5*sin((p.x+p.y)*2.3+t*1.7),
             cos(p.y*.7+t)+cos(p.x*1.6-t*1.2)+.5*cos((p.x-p.y)*2.7-t*1.5))*.035;
@@ -396,18 +396,6 @@ col+=(1.-uBN)*vec3(1.,.92,.75)*(pow(max(dot(n,h),0.),200.)*.9+pow(max(dot(n,h),0
 col=mix(col,vec3(1.),smoothstep(.2,.34,length(g))*.3);
 float d=length(uCam-vP);col=mix(col,uFog,1.-exp(-d*d*uFd*uFd));
 col*=(1.-uSkyBlack);
-if(uSplitOn>0.5){
-vec2 rel=vP.xz-uSplitA;
-float along=dot(rel,uSplitD);
-float across=dot(rel,vec2(-uSplitD.y,uSplitD.x));
-float effW=uSplitW*uSplitAnim;
-if(along>-2.0&&along<uSplitLen+2.0&&abs(across)<effW)discard;
-float wall=1.-smoothstep(0.,2.5,abs(abs(across)-effW));
-wall*=smoothstep(-2.,0.,along)*smoothstep(uSplitLen+2.,uSplitLen,along);
-float pulse=.75+.25*sin(uT*3.+along*.4);
-wall*=pulse;
-col=mix(col,vec3(1.,.98,.92),wall*0.55);
-}
 gl_FragColor=vec4(col,gl_FrontFacing?mix(.62,1.,f):.92);}`}));
 water.renderOrder=2;water.frustumCulled=false;scene.add(water);
 function patch(m,key,vcode){m.customProgramCacheKey=()=>key;m.onBeforeCompile=s=>{s.uniforms.uT=U.uT;
@@ -950,7 +938,7 @@ for(const[k,g]of PM){if(Math.abs(g.c.x-P.x)>CL*5||Math.abs(g.c.z-P.z)>CL*5)dropP
 for(const g of PM.values())if(g.gm){g.gm.rotation.y+=dt*g.spin;if(g.c.t===3)g.gm.position.y=Math.sin(t*.9)*.3}for(const L of lhPool){const b=L.userData.beam;if(b){b.rotation.y=t*0.9}}}
 function regen(q,keepPos){
   const kx=P.x,kz=P.z;
-  closeSplit();
+  destroyPyramid();
   setSeed(q);
   clearSkyBreak();
   for(const k of [...PM.keys()])dropPOI(k);
@@ -1021,7 +1009,7 @@ function grab(){
   else{const c=nearPOI(12);if(c)ask(c)}}
 function stopDrag(){if(dragging && rm)rm.emit('release',{to:dragging});dragging=null;$('gb').textContent='Grab'}
 function toss(f){
-  const u=held.u,ix=u.idx;u.held=false;u.rest=false;u.remoteHeld=null;u.skip=0; // SKIP: reset skip count on throw
+  const u=held.u,ix=u.idx;if(u.kind===10)u.pinned=false;u.held=false;u.rest=false;u.remoteHeld=null;u.skip=0; // SKIP: reset skip count on throw
   u.v.copy(fw).multiplyScalar(10+f*18);u.v.y+=3.0;u.v.addScaledVector(P.v,.5);
   u.o=held.position.clone();
   u.thrownBy = rm ? rm.id : 'me';
@@ -1180,7 +1168,7 @@ function netErrMsg(e,n){const t=String((e&&(e.type||e.message))||'error');const 
 function returnHome(title,msg,kind){
   netTok++;try{if(rm){rm.leave()}}catch(e){}
   rm=null;rn='';inGame=false;mutedByHost=false;lastPlayerList=[];
-  closeSplit();
+  destroyPyramid();
   boatAuthority=null;inBoat=false;mySeat=-1;boat.occupants=[null,null];
   for(const k in rem){try{scene.remove(rem[k].root)}catch(e){}delete rem[k]}
   document.body.classList.remove('ig');
@@ -1426,8 +1414,7 @@ let bobX=0,bobY=0,bobRoll=0;
 let ix=Math.max(-1,Math.min(1,mv.x+(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)));
 let iy=Math.max(-1,Math.min(1,mv.y+(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)));
 const sy=Math.sin(ya),cy=Math.cos(ya),g=H(P.x,P.z);
-const inSplitCorridor=splitActive&&splitData&&(()=>{const relx=P.x-splitData.x0,relz=P.z-splitData.z0;const along=relx*splitData.dx+relz*splitData.dz;const across=relx*(-splitData.dz)+relz*splitData.dx;return along>-3&&along<splitData.len+3&&Math.abs(across)<splitData.w})();
-const swim=!inBoat&&g<-0.6&&P.y<1.0&&!inSplitCorridor;
+const swim=!inBoat&&g<-0.6&&P.y<1.0;
 const k=Math.min(1,dt*(swim?4:10));
 running = runToggle && !inBoat && !swim && !dragging;
 if(RG.on){ragTick(dt)}else if(myKo>0){P.v.y-=18*dt;P.y+=P.v.y*dt;const gg=H(P.x,P.z);if(P.y<=gg){P.y=gg;P.v.y=0}
@@ -1488,7 +1475,7 @@ else{
   else{const runMod=running?1.85:1;const sp=(g<.1?3:5.2)*runMod,tx=(-sy*iy+cy*ix)*sp,tz=(-cy*iy-sy*ix)*sp;
     P.v.x+=(tx-P.v.x)*k;P.v.z+=(tz-P.v.z)*k;P.x+=P.v.x*dt;P.z+=P.v.z*dt;
     resolvePointCollisions(P,P.y,0.4);
-    const g2=H(P.x,P.z);P.v.y-=18*dt;P.y+=P.v.y*dt;if(g2<-.6&&P.v.y>0&&P.y>gYw+1.4)P.v.y=0;
+    const g2=Math.max(H(P.x,P.z),pyramidGroundAt(P.x,P.z));P.v.y-=18*dt;P.y+=P.v.y*dt;if(g2<-.6&&P.v.y>0&&P.y>gYw+1.4)P.v.y=0;
     if(P.y<=g2){if(P.v.y<-9)shake(Math.min(.55,(-P.v.y-9)*.07));P.y=g2;P.v.y=0;if(jump){sfx('jump');P.v.y=7.0}}}
   if(!inBoat&&!swim&&myKo<=0){
     for(const pad of padPool){
@@ -1528,7 +1515,7 @@ else{
   dirAnim(me,P.v.x,P.v.z,byaw,dt);{const rel=Math.atan2(Math.sin(ya+Math.PI-byaw),Math.cos(ya+Math.PI-byaw)),kk=Math.min(1,dt*10);me.hy=(me.hy||0)+(Math.max(-1.1,Math.min(1.1,rel))-(me.hy||0))*kk;me.hx=(me.hx||0)+(Math.max(-.7,Math.min(.7,-pt*.8))-(me.hx||0))*kk}
   pose(me,U.uT.value,ph,spd,mdl,!!held,0,runFlag);net(dt,U.uT.value,spd,mdl);if(fr%30===0)hud()}
 if((tp||emote>0)&&myKo<=0&&!pulledBy){cam.position.addScaledVector(fw,-3.4).addScaledVector(rt,.5);cam.position.y=Math.max(cam.position.y,H(cam.position.x,cam.position.z)+.4)}
-const uw=cam.position.y<0&&!inSplitCorridor;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
+const uw=cam.position.y<0;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
 if(!uw){if(skyBlack>0)fogC.setRGB(FOG0.r*(1-skyBlack),FOG0.g*(1-skyBlack),FOG0.b*(1-skyBlack));else fogC.copy(FOG0)}
 const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && !RG.on && (!!held||!!dragging||eatT>=0);
 handVis+=((wantHand?1:0)-handVis)*Math.min(1,dt*7);
@@ -1558,6 +1545,7 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
       r.rotation.set(0,ax,0);r.visible=true}else r.visible=false;
     continue}
   if(!r.visible)r.visible=true;
+  if(u.pinned&&!u.held&&u.kind===10){r.position.set(u.pinX,u.pinY+Math.sin(U.uT.value*1.8)*0.25,u.pinZ);r.rotation.y+=dt*1.2;continue}
   if(u.held){if(!handR.visible){me.haR.getWorldPosition(r.position);r.position.y-=.05}continue}
   if(u.skyBreaker&&!u.triggered&&!u.rest&&r.position.y>12){u.triggered=true;triggerSkyBreak();r.position.set(r.position.x+9000,700,r.position.z+9000);u.rest=true;u.v.set(0,0,0);continue}
   if(!u.rest){const py=r.position.y,gg=H(r.position.x,r.position.z),inW=py<0&&gg<0;u.v.y-=(inW?(u.fl?-7:5):18)*dt;if(inW)u.v.multiplyScalar(1-2.5*dt);
@@ -1596,7 +1584,7 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
     const gy=H(r.position.x,r.position.z)+u.r*.5;
     if(r.position.y<gy){r.position.y=gy;tdone(r);
       if(u.v.y<-2){u.v.y*=-(u.b||.3);u.v.x*=.7;u.v.z*=.7}else{u.v.y=0;u.v.x*=.85;u.v.z*=.85;if(Math.hypot(u.v.x,u.v.z)<.4){u.rest=true;u.skip=0}}}}
-  if(i===fr%rocks.length&&(u.rest||u.fl)&&r.position.distanceToSquared(P)>3600)place(r);
+  if(!u.pinned&&i===fr%rocks.length&&(u.rest||u.fl)&&r.position.distanceToSquared(P)>3600)place(r);
   if(u.kind===4&&r.position.distanceToSquared(P)<3){orbs++;sfx('orb');hud('orb!');place(r)}}
 if(inGame&&!RG.on){mergeT-=dt;if(mergeT<=0){mergeT=.35;tryMergeBurgers()}}
 portalTick(dt)
@@ -1611,7 +1599,7 @@ birds.instanceMatrix.needsUpdate=true;
 for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t*.8+i)*.5;mp[j+1]=P.y+.3+((i*.137+t*.04)%1)*8;mp[j+2]=P.z+Math.cos(i*7.7+t*.06)*15+Math.cos(t*.9+i)*.5}mg.attributes.position.needsUpdate=true;motes.visible=!uw;
 {const ic=inCave();sun.intensity+=((((ic?.35:1.1))*(1-skyBlack))-sun.intensity)*Math.min(1,dt*3)}
 poiTick(dt,t);if(fr%6===0)mixAudio(uw);
-splitTick(dt);
+if(inGame)pyramidTick(dt);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
 $('ebt').style.display=(held&&held.u.kind===6&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
@@ -1620,73 +1608,216 @@ if(trauma>0){trauma=Math.max(0,trauma-dt*1.4);const s=trauma*trauma,q=t*28;cam.r
 rd.render(scene,cam);reflectPass(uw)}
 
 // ============================================================
-//  MOSES SPLIT: hold a burger facing water, stand still 5s
+//  PYRAMID + DIAMOND + GIANT BURGER
 // ============================================================
-let splitActive=false,splitData=null,splitT=0,splitAnim=0,splitClosing=false;
-function splitTick(dt){
-  if(splitClosing){
-    splitAnim=Math.max(0,splitAnim-dt*2.5);
-    if(wU.uSplitAnim)wU.uSplitAnim.value=splitAnim;
-    if(splitAnim<=0){
-      splitClosing=false;splitActive=false;splitData=null;
-      if(wU.uSplitOn)wU.uSplitOn.value=0;
-      addMsg('\u00b7','the waters return',.15);
-      sfx('whoosh');
+const PYRAMID={active:false,phase:'idle',t:0,x:0,z:0,y:0,half:42,innerHalf:8,
+  inset:3,stepH:2.5,steps:11,height:0,group:null,marker:null,diaItem:null,burger:null};
+
+function pyramidGroundAt(x,z){
+  if(!PYRAMID.active||!PYRAMID.group)return -1e9;
+  const dx=x-PYRAMID.x,dz=z-PYRAMID.z;
+  const ax=Math.abs(dx),az=Math.abs(dz);
+  const d=Math.max(ax,az);
+  if(d>PYRAMID.half)return -1e9;
+  if(d<PYRAMID.innerHalf)return PYRAMID.y;
+  if(ax<2.5&&dz>0&&dz<PYRAMID.half)return PYRAMID.y;
+  const k=Math.min(PYRAMID.steps-1,Math.floor((PYRAMID.half-d)/PYRAMID.inset));
+  return PYRAMID.y+k*PYRAMID.stepH;
+}
+
+function destroyPyramid(){
+  if(PYRAMID.group){scene.remove(PYRAMID.group);PYRAMID.group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});PYRAMID.group=null;}
+  if(PYRAMID.burger){scene.remove(PYRAMID.burger);PYRAMID.burger.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});PYRAMID.burger=null;}
+  if(PYRAMID.diaItem){
+    const idx=rocks.indexOf(PYRAMID.diaItem);
+    if(idx>=0)rocks.splice(idx,1);
+    scene.remove(PYRAMID.diaItem);
+    PYRAMID.diaItem=null;
+  }
+  if(held&&held.u.kind===10){held=null;try{$('gb').textContent='Grab'}catch(e){}}
+  PYRAMID.active=false;PYRAMID.phase='idle';PYRAMID.t=0;PYRAMID.marker=null;
+}
+
+function buildPyramid(ox,oz){
+  destroyPyramid();
+  const y0=H(ox,oz);
+  const half=42,innerHalf=8,inset=3,stepH=2.5,wallT=3,steps=11;
+  const g=new T.Group();g.position.set(ox,y0,oz);
+  const stoneA=new T.MeshLambertMaterial({color:0xc8b48a});
+  const stoneB=new T.MeshLambertMaterial({color:0xb09a72});
+  const gold=new T.MeshPhongMaterial({color:0xffd76a,emissive:0x803a10,emissiveIntensity:.3,shininess:120});
+  for(let k=0;k<steps;k++){
+    const D=half-k*inset;
+    const y=k*stepH+stepH/2;
+    const mat=k%2?stoneB:stoneA;
+    let m=new T.Mesh(new T.BoxGeometry(D*2,stepH,wallT),mat);
+    m.position.set(0,y,-(D-wallT/2));g.add(m);
+    m=new T.Mesh(new T.BoxGeometry(wallT,stepH,D*2-wallT*2),mat);
+    m.position.set(D-wallT/2,y,0);g.add(m);
+    m=new T.Mesh(new T.BoxGeometry(wallT,stepH,D*2-wallT*2),mat);
+    m.position.set(-(D-wallT/2),y,0);g.add(m);
+    if(k<3){
+      const gapW=4,sideW=(D*2-gapW)/2;
+      m=new T.Mesh(new T.BoxGeometry(sideW,stepH,wallT),mat);
+      m.position.set(-(gapW/2+sideW/2),y,D-wallT/2);g.add(m);
+      m=new T.Mesh(new T.BoxGeometry(sideW,stepH,wallT),mat);
+      m.position.set((gapW/2+sideW/2),y,D-wallT/2);g.add(m);
+      if(k===2){
+        m=new T.Mesh(new T.BoxGeometry(gapW,stepH*0.55,wallT),mat);
+        m.position.set(0,y+stepH*0.22,D-wallT/2);g.add(m);
+      }
+    } else {
+      m=new T.Mesh(new T.BoxGeometry(D*2,stepH,wallT),mat);
+      m.position.set(0,y,D-wallT/2);g.add(m);
     }
-    return;
   }
-  if(splitActive&&splitAnim<1){
-    splitAnim=Math.min(1,splitAnim+dt*1.8);
-    if(wU.uSplitAnim)wU.uSplitAnim.value=splitAnim;
-  }
-  if(!inGame){if(splitActive)closeSplit();return}
-  const holding=held&&held.u.kind===6;
-  if(!holding){splitT=0;if(splitActive)closeSplit();return}
-  if(splitActive)return;
-  cam.getWorldDirection(fw);
-  let dx=fw.x,dz=fw.z;
-  const dl=Math.hypot(dx,dz)||1;
-  dx/=dl;dz/=dl;
-  let waterAhead=false;
-  for(let r=3;r<22;r+=1.5){
-    if(H(P.x+dx*r,P.z+dz*r)<-0.3){waterAhead=true;break}
-  }
-  if(!waterAhead){splitT=0;return}
-  const spd=Math.hypot(P.v.x,P.v.z);
-  if(spd>0.6){splitT=Math.max(0,splitT-dt*2);return}
-  splitT+=dt;
-  if(Math.floor(splitT*2)!==Math.floor((splitT-dt)*2)){
-    sfx('click');ripple(P.x,P.z,0.5);
-  }
-  if(splitT>=5){
-    let endR=220;
-    for(let r=4;r<220;r+=1){
-      if(H(P.x+dx*r,P.z+dz*r)>0.05){endR=r;break}
+  let m=new T.Mesh(new T.BoxGeometry(innerHalf*2,0.3,innerHalf*2),stoneB);
+  m.position.set(0,0.15,0);g.add(m);
+  m=new T.Mesh(new T.BoxGeometry(innerHalf*2+wallT*2,0.5,innerHalf*2+wallT*2),stoneA);
+  m.position.set(0,6.25,0);g.add(m);
+  const iy=6;
+  m=new T.Mesh(new T.BoxGeometry(innerHalf*2+wallT*2,iy,wallT),stoneA);
+  m.position.set(0,iy/2,-(innerHalf+wallT/2));g.add(m);
+  m=new T.Mesh(new T.BoxGeometry(wallT,iy,innerHalf*2+wallT*2),stoneA);
+  m.position.set(innerHalf+wallT/2,iy/2,0);g.add(m);
+  m=new T.Mesh(new T.BoxGeometry(wallT,iy,innerHalf*2+wallT*2),stoneA);
+  m.position.set(-(innerHalf+wallT/2),iy/2,0);g.add(m);
+  const doorW=3,doorH=4.6;
+  const sideW=(innerHalf*2+wallT*2-doorW)/2;
+  m=new T.Mesh(new T.BoxGeometry(sideW,iy,wallT),stoneA);
+  m.position.set(-(doorW/2+sideW/2),iy/2,innerHalf+wallT/2);g.add(m);
+  m=new T.Mesh(new T.BoxGeometry(sideW,iy,wallT),stoneA);
+  m.position.set((doorW/2+sideW/2),iy/2,innerHalf+wallT/2);g.add(m);
+  m=new T.Mesh(new T.BoxGeometry(doorW,iy-doorH,wallT),stoneA);
+  m.position.set(0,doorH+(iy-doorH)/2,innerHalf+wallT/2);g.add(m);
+  const dais=new T.Mesh(new T.CylinderGeometry(2.6,3.0,0.5,16),gold);
+  dais.position.set(0,0.55,0);g.add(dais);
+  const cap=new T.Mesh(new T.ConeGeometry(inset*0.9,stepH*1.6,4),gold);
+  cap.rotation.y=Math.PI/4;
+  cap.position.set(0,(steps-1)*stepH+stepH*1.0,0);g.add(cap);
+  const marker=new T.Sprite(new T.SpriteMaterial({map:halo,color:0xffd76a,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.55}));
+  marker.scale.set(14,14,1);marker.position.set(0,(steps-1)*stepH+3.5,0);g.add(marker);
+  scene.add(g);
+  PYRAMID.group=g;
+  PYRAMID.active=true;PYRAMID.phase='idle';PYRAMID.t=0;
+  PYRAMID.x=ox;PYRAMID.z=oz;PYRAMID.y=y0;
+  PYRAMID.half=half;PYRAMID.innerHalf=innerHalf;PYRAMID.inset=inset;
+  PYRAMID.stepH=stepH;PYRAMID.steps=steps;PYRAMID.height=(steps-1)*stepH;
+  PYRAMID.marker=marker;
+  const diaG=new T.OctahedronGeometry(0.9).scale(1,1.6,1);
+  const diaM=new T.MeshPhongMaterial({color:0xaef2ff,emissive:0x4ac8dd,emissiveIntensity:1.2,shininess:220,flatShading:true});
+  const dia=new T.Mesh(diaG,diaM);
+  dia.position.set(ox,y0+3.2,oz);
+  dia.castShadow=true;
+  const diaHalo=new T.Sprite(new T.SpriteMaterial({map:halo,color:0x9fe8ff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.85}));
+  diaHalo.scale.set(7,7,1);dia.add(diaHalo);
+  scene.add(dia);
+  dia.u={r:.55,b:.3,fl:0,kind:10,v:new V3(),rest:true,held:false,remoteHeld:null,idx:rocks.length,skip:0,pinned:true,pinX:ox,pinY:y0+3.2,pinZ:oz,sealed:false};
+  rocks.push(dia);
+  PYRAMID.diaItem=dia;
+  addMsg('\u2726','a great pyramid rises nearby...',.15);
+}
+
+function buildPyramidNear(){
+  for(let r=60;r<160;r+=10){
+    for(let a=0;a<16;a++){
+      const an=a*(6.2832/16);
+      const x=P.x+Math.cos(an)*r,z=P.z+Math.sin(an)*r;
+      const h=H(x,z);
+      if(h<2||h>16)continue;
+      let ok=true;
+      for(const[cx,cz]of[[-40,-40],[40,-40],[-40,40],[40,40],[0,0]]){
+        const hh=H(x+cx,z+cz);
+        if(Math.abs(hh-h)>8){ok=false;break}
+      }
+      if(!ok)continue;
+      buildPyramid(x,z);
+      return;
     }
-    if(endR>=220)endR=100;
-    if(endR<6){splitT=0;return}
-    splitActive=true;
-    splitData={x0:P.x,z0:P.z,dx,dz,len:endR,w:6};
-    splitAnim=0;
-    if(wU.uSplitOn){
-      wU.uSplitOn.value=1;
-      wU.uSplitAnim.value=0;
-      wU.uSplitA.value.set(P.x,P.z);
-      wU.uSplitD.value.set(dx,dz);
-      wU.uSplitLen.value=endR;
-      wU.uSplitW.value=6;
-    }
-    addMsg('\u2726','the waters part',.15);
-    sfx('launch');shake(.35);
   }
 }
-function closeSplit(){
-  if(!splitActive||splitClosing)return;
-  splitClosing=true;splitT=0;
+
+function makeGiantBurger(){
+  const g=new T.Group();
+  g.position.set(PYRAMID.x,PYRAMID.y,PYRAMID.z);
+  const bunM=new T.MeshPhongMaterial({color:0xe0a03a,shininess:22,emissive:0x3a1a00,emissiveIntensity:.18});
+  const meatM=new T.MeshPhongMaterial({color:0x5a3520,shininess:8,emissive:0x1a0500,emissiveIntensity:.25});
+  const bB=new T.Mesh(new T.CylinderGeometry(.24,.24,.10,24),bunM);
+  const pt=new T.Mesh(new T.CylinderGeometry(.24,.24,.09,24),meatM);
+  const bT=new T.Mesh(new T.SphereGeometry(.24,24,14,0,6.283,0,Math.PI/2),bunM);
+  bB.position.y=-.055;pt.position.y=.045;bT.position.y=.09;
+  bB.castShadow=pt.castShadow=bT.castShadow=true;
+  g.add(bB,pt,bT);
+  const gl=new T.Sprite(new T.SpriteMaterial({map:halo,color:0xffd76a,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.5}));
+  gl.scale.set(140,140,1);gl.position.y=4;g.add(gl);
+  g.scale.set(0.001,0.001,0.001);
+  g.userData.fsx=175;g.userData.fsy=80;g.userData.fsz=175;
+  scene.add(g);
+  PYRAMID.burger=g;
 }
+
+function pyramidTick(dt){
+  if(!PYRAMID.active&&PYRAMID.phase==='idle')return;
+  if(PYRAMID.marker)PYRAMID.marker.material.opacity=.35+.3*Math.sin(U.uT.value*2);
+  if(PYRAMID.phase==='idle'){
+    if(held&&held.u.kind===10){
+      const ax=Math.abs(P.x-PYRAMID.x),az=Math.abs(P.z-PYRAMID.z);
+      if(Math.max(ax,az)<16&&P.y>PYRAMID.y+PYRAMID.height-3){
+        PYRAMID.phase='place';PYRAMID.t=0;
+        addMsg('\u2726','the diamond rises to the summit',.15);
+        sfx('launch');shake(.6);
+      }
+    }
+  } else if(PYRAMID.phase==='place'){
+    PYRAMID.t+=dt;
+    if(held&&held.u.kind===10){
+      const k=Math.min(1,dt*2.5);
+      held.position.x+=(PYRAMID.x-held.position.x)*k;
+      held.position.y+=(PYRAMID.y+PYRAMID.height+3.5-held.position.y)*k;
+      held.position.z+=(PYRAMID.z-held.position.z)*k;
+      held.rotation.y+=dt*10;
+    }
+    if(PYRAMID.t>=1.5){
+      if(held&&held.u.kind===10){
+        held.u.sealed=true;held.u.held=false;held.position.set(0,-9000,0);
+        held=null;try{$('gb').textContent='Grab'}catch(e){}
+      }
+      PYRAMID.phase='fold';PYRAMID.t=0;
+      addMsg('\u2726','the pyramid begins to fold',.15);
+      sfx('launch');shake(1);
+    }
+  } else if(PYRAMID.phase==='fold'){
+    PYRAMID.t+=dt;
+    const p=Math.min(1,PYRAMID.t/2.5);
+    if(PYRAMID.group){
+      PYRAMID.group.rotation.y+=dt*2.4;
+      PYRAMID.group.position.x=PYRAMID.x+Math.sin(PYRAMID.t*40)*0.35;
+      PYRAMID.group.position.z=PYRAMID.z+Math.cos(PYRAMID.t*40)*0.35;
+    }
+    if(PYRAMID.marker)PYRAMID.marker.material.opacity=.25+Math.sin(PYRAMID.t*30)*.35;
+    if(p>=1){
+      if(PYRAMID.group){scene.remove(PYRAMID.group);PYRAMID.group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});PYRAMID.group=null;}
+      PYRAMID.active=false;
+      makeGiantBurger();
+      PYRAMID.phase='reveal';PYRAMID.t=0;
+      addMsg('\u2726','THE PYRAMID IS NOW A GIANT BURGER',.1);
+      sfx('launch');shake(1.2);
+    }
+  } else if(PYRAMID.phase==='reveal'){
+    PYRAMID.t+=dt;
+    const p=Math.min(1,PYRAMID.t/1.5);
+    const e=p*p*(3-2*p);
+    if(PYRAMID.burger){
+      PYRAMID.burger.scale.set(e*PYRAMID.burger.userData.fsx,e*PYRAMID.burger.userData.fsy,e*PYRAMID.burger.userData.fsz);
+    }
+    if(p>=1){PYRAMID.phase='done';}
+  }
+}
+
 
 function spawnAllPads(){
   padReady=true;
+  buildPyramidNear();
   for(const c of pool)if(c.cx!==1e9)trySpawnPad(c.cx*CS,c.cz*CS);
   (function spawnDebugPad(){const px=P.x, pz=P.z-6, py=H(px,pz);const g=new T.Group();g.position.set(px,py+.25,pz);
   {const e=.7;const nx=H(px-e,pz)-H(px+e,pz);const nz=H(px,pz-e)-H(px,pz+e);
