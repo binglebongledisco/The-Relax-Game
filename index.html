@@ -376,10 +376,10 @@ function reflectPass(uw){
   water.visible=handR.visible=lhG.visible=motes.visible=false;rd.clippingPlanes=[rPl];
   rd.setRenderTarget(RT);rd.clear();rd.render(scene,rcam);rd.setRenderTarget(null);
   rd.clippingPlanes=cp;water.visible=v0[0];handR.visible=v0[1];lhG.visible=v0[2];motes.visible=v0[3];rtOK=true;wU.uRF.value=1}
-const wU={uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.014},uR:{value:WR},uBN:{value:0},uRT:{value:RT.texture},uTM:{value:rTM},uRF:{value:0},uSkyBlack:{value:0},uSplitOn:{value:0},uSplitA:{value:new T.Vector2(0,0)},uSplitD:{value:new T.Vector2(1,0)},uSplitLen:{value:0},uSplitW:{value:6}};
+const wU={uT:U.uT,uSun:{value:SUN},uCam:{value:cam.position},uFog:{value:fogC},uFd:{value:.014},uR:{value:WR},uBN:{value:0},uRT:{value:RT.texture},uTM:{value:rTM},uRF:{value:0},uSkyBlack:{value:0},uSplitOn:{value:0},uSplitAnim:{value:0},uSplitA:{value:new T.Vector2(0,0)},uSplitD:{value:new T.Vector2(1,0)},uSplitLen:{value:0},uSplitW:{value:6}};
 const water=new T.Mesh(new T.PlaneGeometry(700,700).rotateX(-Math.PI/2),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,precision:HIGHP,uniforms:wU,
 vertexShader:'varying vec3 vP;void main(){vec4 w=modelMatrix*vec4(position,1.);vP=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
-fragmentShader:`varying vec3 vP;uniform vec3 uSun,uCam,uFog;uniform float uT,uFd,uSkyBlack;uniform vec4 uR[10];uniform float uBN;uniform sampler2D uRT;uniform mat4 uTM;uniform float uRF;uniform float uSplitOn,uSplitLen,uSplitW;uniform vec2 uSplitA,uSplitD;`+NZ+`
+fragmentShader:`varying vec3 vP;uniform vec3 uSun,uCam,uFog;uniform float uT,uFd,uSkyBlack;uniform vec4 uR[10];uniform float uBN;uniform sampler2D uRT;uniform mat4 uTM;uniform float uRF;uniform float uSplitOn,uSplitLen,uSplitW,uSplitAnim;uniform vec2 uSplitA,uSplitD;`+NZ+`
 void main(){vec2 p=vP.xz;float t=uT;
 vec2 g=vec2(sin(p.x*.8+t*1.1)+sin(p.y*1.3-t*.9)+.5*sin((p.x+p.y)*2.3+t*1.7),
             cos(p.y*.7+t)+cos(p.x*1.6-t*1.2)+.5*cos((p.x-p.y)*2.7-t*1.5))*.035;
@@ -400,7 +400,13 @@ if(uSplitOn>0.5){
 vec2 rel=vP.xz-uSplitA;
 float along=dot(rel,uSplitD);
 float across=dot(rel,vec2(-uSplitD.y,uSplitD.x));
-if(along>-2.0&&along<uSplitLen+2.0&&abs(across)<uSplitW)discard;
+float effW=uSplitW*uSplitAnim;
+if(along>-2.0&&along<uSplitLen+2.0&&abs(across)<effW)discard;
+float wall=1.-smoothstep(0.,2.5,abs(abs(across)-effW));
+wall*=smoothstep(-2.,0.,along)*smoothstep(uSplitLen+2.,uSplitLen,along);
+float pulse=.75+.25*sin(uT*3.+along*.4);
+wall*=pulse;
+col=mix(col,vec3(1.,.98,.92),wall*0.55);
 }
 gl_FragColor=vec4(col,gl_FrontFacing?mix(.62,1.,f):.92);}`}));
 water.renderOrder=2;water.frustumCulled=false;scene.add(water);
@@ -1522,7 +1528,7 @@ else{
   dirAnim(me,P.v.x,P.v.z,byaw,dt);{const rel=Math.atan2(Math.sin(ya+Math.PI-byaw),Math.cos(ya+Math.PI-byaw)),kk=Math.min(1,dt*10);me.hy=(me.hy||0)+(Math.max(-1.1,Math.min(1.1,rel))-(me.hy||0))*kk;me.hx=(me.hx||0)+(Math.max(-.7,Math.min(.7,-pt*.8))-(me.hx||0))*kk}
   pose(me,U.uT.value,ph,spd,mdl,!!held,0,runFlag);net(dt,U.uT.value,spd,mdl);if(fr%30===0)hud()}
 if((tp||emote>0)&&myKo<=0&&!pulledBy){cam.position.addScaledVector(fw,-3.4).addScaledVector(rt,.5);cam.position.y=Math.max(cam.position.y,H(cam.position.x,cam.position.z)+.4)}
-const uw=cam.position.y<0;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
+const uw=cam.position.y<0&&!inSplitCorridor;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
 if(!uw){if(skyBlack>0)fogC.setRGB(FOG0.r*(1-skyBlack),FOG0.g*(1-skyBlack),FOG0.b*(1-skyBlack));else fogC.copy(FOG0)}
 const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && !RG.on && (!!held||!!dragging||eatT>=0);
 handVis+=((wantHand?1:0)-handVis)*Math.min(1,dt*7);
@@ -1605,7 +1611,7 @@ birds.instanceMatrix.needsUpdate=true;
 for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t*.8+i)*.5;mp[j+1]=P.y+.3+((i*.137+t*.04)%1)*8;mp[j+2]=P.z+Math.cos(i*7.7+t*.06)*15+Math.cos(t*.9+i)*.5}mg.attributes.position.needsUpdate=true;motes.visible=!uw;
 {const ic=inCave();sun.intensity+=((((ic?.35:1.1))*(1-skyBlack))-sun.intensity)*Math.min(1,dt*3)}
 poiTick(dt,t);if(fr%6===0)mixAudio(uw);
-if(inGame)splitTick(dt);
+splitTick(dt);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
 $('ebt').style.display=(held&&held.u.kind===6&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
@@ -1616,8 +1622,23 @@ rd.render(scene,cam);reflectPass(uw)}
 // ============================================================
 //  MOSES SPLIT: hold a burger facing water, stand still 5s
 // ============================================================
-let splitActive=false,splitData=null,splitT=0;
+let splitActive=false,splitData=null,splitT=0,splitAnim=0,splitClosing=false;
 function splitTick(dt){
+  if(splitClosing){
+    splitAnim=Math.max(0,splitAnim-dt*2.5);
+    if(wU.uSplitAnim)wU.uSplitAnim.value=splitAnim;
+    if(splitAnim<=0){
+      splitClosing=false;splitActive=false;splitData=null;
+      if(wU.uSplitOn)wU.uSplitOn.value=0;
+      addMsg('\u00b7','the waters return',.15);
+      sfx('whoosh');
+    }
+    return;
+  }
+  if(splitActive&&splitAnim<1){
+    splitAnim=Math.min(1,splitAnim+dt*1.8);
+    if(wU.uSplitAnim)wU.uSplitAnim.value=splitAnim;
+  }
   if(!inGame){if(splitActive)closeSplit();return}
   const holding=held&&held.u.kind===6;
   if(!holding){splitT=0;if(splitActive)closeSplit();return}
@@ -1646,8 +1667,10 @@ function splitTick(dt){
     if(endR<6){splitT=0;return}
     splitActive=true;
     splitData={x0:P.x,z0:P.z,dx,dz,len:endR,w:6};
+    splitAnim=0;
     if(wU.uSplitOn){
       wU.uSplitOn.value=1;
+      wU.uSplitAnim.value=0;
       wU.uSplitA.value.set(P.x,P.z);
       wU.uSplitD.value.set(dx,dz);
       wU.uSplitLen.value=endR;
@@ -1658,11 +1681,8 @@ function splitTick(dt){
   }
 }
 function closeSplit(){
-  if(!splitActive)return;
-  splitActive=false;splitData=null;splitT=0;
-  if(wU.uSplitOn)wU.uSplitOn.value=0;
-  addMsg('\u00b7','the waters return',.15);
-  sfx('whoosh');
+  if(!splitActive||splitClosing)return;
+  splitClosing=true;splitT=0;
 }
 
 function spawnAllPads(){
