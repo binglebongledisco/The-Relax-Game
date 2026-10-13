@@ -314,9 +314,9 @@ function pyramidFlat(x,z){
   if(chezPyramid.x===1e9)return null;
   const dx=x-chezPyramid.x, dz=z-chezPyramid.z;
   const d2=dx*dx+dz*dz;
-  if(d2>2500)return null;
+  if(d2>3025)return null;
   const d=Math.sqrt(d2);
-  const w=1-ss(32,50,d);
+  const w=1-ss(40,55,d);
   return {y:chezPyramid.y, w:w};
 }
 function cave(x,z){const _py=pyramidAt(x,z);if(_py)return _py;const ix=Math.floor(x/CL),iz=Math.floor(z/CL),k=(ix+4096)*8192+iz+4096;let c=CV.get(k);
@@ -1431,7 +1431,7 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
     const gy=H(r.position.x,r.position.z)+u.r*.5;
     if(r.position.y<gy){r.position.y=gy;tdone(r);
       if(u.v.y<-2){u.v.y*=-(u.b||.3);u.v.x*=.7;u.v.z*=.7}else{u.v.y=0;u.v.x*=.85;u.v.z*=.85;if(Math.hypot(u.v.x,u.v.z)<.4){u.rest=true;u.skip=0}}}}
-  if(i===fr%rocks.length&&(u.rest||u.fl)&&r.position.distanceToSquared(P)>3600)place(r);
+  if(i===fr%rocks.length&&(u.rest||u.fl)&&r.position.distanceToSquared(P)>3600&&r!==chezBurgerItem)place(r);
   if(u.kind===4&&r.position.distanceToSquared(P)<3){orbs++;sfx('orb');hud('orb!');place(r)}}
 for(const o of activeOres){if(o.flash>0){o.flash=Math.max(0,o.flash-dt*4);o.sp.material.opacity=.35+o.flash*.55;o.sp.scale.set(1.1+o.flash*1.1,1.1+o.flash*1.1,1)}
   o.m.rotation.y+=dt*o.spin;if(Math.abs(o.m.rotation.z)>.002)o.m.rotation.z*=Math.max(0,1-dt*7);else o.m.rotation.z=0}
