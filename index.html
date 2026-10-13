@@ -598,8 +598,6 @@ function leaveBoat(){if(!inBoat)return;
   const lb=document.getElementById('lb');if(lb)lb.style.display='none'}
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
 const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1,eatChomped=0;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
-// HENGE GEM: grabbable golden gem at henge; after 5s embeds in chest -> golden state
-let heldGem=null,goldenT=-1,goldenState=false,goldenAura=null;const _gemScale=new V3();
 // SKIP: place() now also resets skip counter when a rock is (re)spawned
 function place(m){const a=sRng()*6.283,r=8+sRng()*48,x=P.x+Math.cos(a)*r,z=P.z+Math.sin(a)*r;m.position.set(x,H(x,z)+m.u.r*.5,z);m.u.rest=true;m.u.v.set(0,0,0);m.u.skip=0;if(m.u.fl&&m.position.y<0){m.position.y=0;m.u.rest=false}}
 // SKIP: add skip:0 to rock data
@@ -617,9 +615,6 @@ else if(k==6){m=new T.Group();const bB=new T.Mesh(new T.CylinderGeometry(.24,.24
 else{m=new T.Group();const y=PH(0xffd21f,{shininess:120}),bd=new T.Mesh(new T.SphereGeometry(.22,12,8).scale(1,.8,1.3),y),hd=new T.Mesh(new T.SphereGeometry(.13,10,8),y),bk=new T.Mesh(new T.ConeGeometry(.05,.1,6).rotateX(1.5708),PH(0xff7a1a));hd.position.set(0,.2,.17);bk.position.set(0,.19,.3);m.add(bd,hd,bk);r=.25;fl=1}
 // SKIP: add skip:0 to item data
 m.traverse(o=>o.castShadow=true);m.u={r,b,fl,kind:k,v:new V3(),rest:true,held:false,remoteHeld:null,idx:rocks.length,skip:0};place(m);rocks.push(m);scene.add(m)}
-// HENGE GEM: tint/untint held item while golden state active
-function tintGold(m){m.traverse(o=>{if(!o.isMesh||!o.material)return;if(o.userData._goldOrigMat!==undefined)return;o.userData._goldOrigMat=o.material;const cl=Array.isArray(o.material)?o.material.map(x=>x.clone()):o.material.clone();const ap=c=>{if(c.color)c.color.setHex(0xffd76a);if(c.emissive){c.emissive.setHex(0xffb040);c.emissiveIntensity=.6}};if(Array.isArray(cl))cl.forEach(ap);else ap(cl);o.material=cl})}
-function untintGold(m){m.traverse(o=>{if(!o.isMesh)return;if(o.userData._goldOrigMat===undefined)return;o.material=o.userData._goldOrigMat;delete o.userData._goldOrigMat})}
 for(let i=0;i<48;i++)mkItem(i%6);for(let i=0;i<10;i++)mkItem(6);
 // BURGER MERGE: 4 resting small burgers close together become one mega burger
 let mergeT=0;
@@ -908,10 +903,7 @@ for(let k=0;k<5;k++){const h=1.4+r(k+40)*1.6;oc(.4,.7,h*1.6,(r(k+20)-.5)*2.4,c.f
 gl(0,c.f+1.5,0,0x4ac8dd,8);const bm=new T.Mesh(new T.CylinderGeometry(.35,.9,16,8,1,true),new T.MeshBasicMaterial({color:0x4ac8dd,transparent:true,opacity:.1,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,fog:false}));bm.position.y=c.f+8;g.add(bm)}
 else if(c.t===1){for(let k=0;k<9;k++){const a=k/9*6.283;bx(1.3,r(k)<.2?2.2:4.6,.9,Math.cos(a)*6,Math.sin(a)*6,a+1.57,ST)}
 for(let k=0;k<9;k+=3){const a=(k+.5)/9*6.283;bx(3.6,.7,1.1,Math.cos(a)*6,Math.sin(a)*6,a+1.57,ST,0,c.y+4.6)}
-S.push([new T.CylinderGeometry(1.3,1.7,.7,8).translate(0,.2,0),mt(0,c.y,0),ST,.05,SH]);
-{const gm=new T.MeshPhongMaterial({color:0xffd76a,emissive:0xd89a3a,emissiveIntensity:.55,shininess:180,flatShading:true});const gem=new T.Mesh(new T.OctahedronGeometry(.5).scale(1,1.3,1),gm);gem.position.set(0,c.y+2,0);gem.castShadow=true;gem.userData.hengeId=c.id;gem.userData.gem=true;
-const gsp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0xd89a3a,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.5}));gsp.scale.set(7,7,1);gem.add(gsp);
-g.add(gem);g.gem=gem;g.gemTaken=false;g.gemHome=new V3(c.x,c.y+2,c.z)}}
+S.push([new T.CylinderGeometry(1.3,1.7,.7,8).translate(0,.2,0),mt(0,c.y,0),ST,.05,SH]);oc(.5,1,1.3,0,c.y+2,0,[1.5,1.1,.5]);gl(0,c.y+2,0,0xd89a3a,7)}
 else if(c.t===2){const y=c.y,tw=(r0,r1,h,sg,yy,col)=>S.push([new T.CylinderGeometry(r0,r1,h,sg,3).translate(0,yy,0),mt(0,y,0),col,.05,SH]);
 tw(3,2.5,9,12,1.5,ST);tw(2.5,2.3,8,12,10,[.8,.77,.7]);tw(3.5,3.5,.7,12,14.3,ST);tw(3.7,3.2,1.2,12,15.3,[.7,.68,.62]);
 for(let k=0;k<12;k++){const a=k/12*6.283;S.push([new T.BoxGeometry(.7,.9,.5),mt(Math.cos(a)*3.5,y+16.4,Math.sin(a)*3.5).multiply(ry(1.5708-a)),ST,.04,SH])}
@@ -1006,35 +998,17 @@ else if(k==='swing')nz(.18,1200,.22,.8);else if(k==='pick'){nz(.08,2600,.38,2);t
 else if(k==='chop'){nz(.1,500,.45,1);tone(110,.15,'sine',.4,70)}else if(k==='break'){[0,.07,.14].forEach((d,i)=>tone(500*Math.pow(1.26,i+t),.3,'triangle',.24,0,d));nz(.25,700,.32,.6)}
 else if(k==='disc'){[523,659,784,1047].forEach((f,i)=>tone(f,1.4,'sine',.16,0,i*.13))}}
 function grab(){
-  if(heldGem)return;
-  if(!goldenState){
-    let bg=null,bd=3.2*3.2;
-    for(const g of PM.values()){
-      if(g.c.t!==1||!g.gem||g.gemTaken)continue;
-      const dx=P.x-g.gemHome.x, dy=(P.y+1)-g.gemHome.y, dz=P.z-g.gemHome.z;
-      const d2=dx*dx+dy*dy+dz*dz;
-      if(d2<bd){bd=d2;bg=g}
-    }
-    if(bg){
-      bg.gemTaken=true;
-      scene.attach(bg.gem);
-      heldGem=bg.gem;
-      goldenT=0;
-      sfx('disc');addMsg('✦','the golden gem hums in your hand',1.0);
-      return;
-    }
-  }
   let frnd=null, fd=2.5*2.5;
   for(const id in rem){const d=rem[id].root.position.distanceToSquared(P);if(d<fd){fd=d;frnd=id}}
   if(frnd){dragging=frnd;dragT=performance.now();$('gb').textContent='Let go';if(rm)rm.emit('dragging',{to:frnd});addMsg('·','You grabbed '+nameOf(frnd),.35);return}
   const o=nearestOre(3.4);if(o){mineOre(o,false);return}
   let b=null,bd=16;
   for(const r of rocks){if(r.u.held||r.u.remoteHeld)continue;const d=r.position.distanceToSquared(cam.position);if(d<bd){bd=d;b=r}}
-  if(b){b.u.held=true;held=b;$('gb').textContent='Throw';sfx('grab');if(goldenState)tintGold(b);if(rm)rm.emit('hold',{i:b.u.idx})}
+  if(b){b.u.held=true;held=b;$('gb').textContent='Throw';sfx('grab');if(rm)rm.emit('hold',{i:b.u.idx})}
   else{const c=nearPOI(12);if(c)ask(c)}}
 function stopDrag(){if(dragging && rm)rm.emit('release',{to:dragging});dragging=null;$('gb').textContent='Grab'}
 function toss(f){
-  const u=held.u,ix=u.idx;if(goldenState)untintGold(held);u.held=false;u.rest=false;u.remoteHeld=null;u.skip=0; // SKIP: reset skip count on throw
+  const u=held.u,ix=u.idx;u.held=false;u.rest=false;u.remoteHeld=null;u.skip=0; // SKIP: reset skip count on throw
   u.v.copy(fw).multiplyScalar(10+f*18);u.v.y+=3.0;u.v.addScaledVector(P.v,.5);
   u.o=held.position.clone();
   u.thrownBy = rm ? rm.id : 'me';
@@ -1193,10 +1167,6 @@ function netErrMsg(e,n){const t=String((e&&(e.type||e.message))||'error');const 
 function returnHome(title,msg,kind){
   netTok++;try{if(rm){rm.leave()}}catch(e){}
   rm=null;rn='';inGame=false;mutedByHost=false;lastPlayerList=[];
-  if(heldGem){heldGem.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});scene.remove(heldGem);heldGem=null}
-  goldenT=-1;
-  if(goldenAura){me.root.remove(goldenAura);if(goldenAura.material)goldenAura.material.dispose();goldenAura=null}
-  goldenState=false;
   boatAuthority=null;inBoat=false;mySeat=-1;boat.occupants=[null,null];
   for(const k in rem){try{scene.remove(rem[k].root)}catch(e){}delete rem[k]}
   document.body.classList.remove('ig');
@@ -1545,7 +1515,7 @@ else{
 if((tp||emote>0)&&myKo<=0&&!pulledBy){cam.position.addScaledVector(fw,-3.4).addScaledVector(rt,.5);cam.position.y=Math.max(cam.position.y,H(cam.position.x,cam.position.z)+.4)}
 const uw=cam.position.y<0;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
 if(!uw){if(skyBlack>0)fogC.setRGB(FOG0.r*(1-skyBlack),FOG0.g*(1-skyBlack),FOG0.b*(1-skyBlack));else fogC.copy(FOG0)}
-const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && !RG.on && (!!held||!!dragging||eatT>=0||(!!heldGem&&goldenT<4.5));
+const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && !RG.on && (!!held||!!dragging||eatT>=0);
 handVis+=((wantHand?1:0)-handVis)*Math.min(1,dt*7);
 handR.visible=handVis>0.02;lhVis+=(((wantHand&&dragging)?1:0)-lhVis)*Math.min(1,dt*7);lhG.visible=handR.visible&&lhVis>.02;
 if(handR.visible){const e=handVis*handVis*(3-2*handVis);const idle=U.uT.value;const spdMag=Math.min(1,Math.hypot(P.v.x,P.v.z)/5.2);
@@ -1559,7 +1529,7 @@ holdK+=((held?1:0)-holdK)*Math.min(1,dt*9);handR.position.y+=holdK*.06;handR.rot
 lhG.position.set(-.36-breathX-walkBob,-.27+Math.sin(idle*1.2+1)*.007+Math.cos(bobT*2+1)*.018*spdMag*(1+runK*.5)+(1-lhVis*lhVis*(3-2*lhVis))*-.55+runK*.08,-.55+runK*.02-sw);
 lhG.rotation.set(-.25+Math.sin(idle*1.2+1)*.02-runK*.12+sw*2.2,-.1-Math.cos(idle*.8)*.015,-.15+walkBob*.8);
 dragK+=((dragging?1:0)-dragK)*Math.min(1,dt*8);{const tg=Math.sin(idle*5)*.03*dragK;handR.position.x-=dragK*.12;handR.position.z+=tg;handR.position.y+=dragK*.05;handR.rotation.y-=dragK*.15;lhG.position.x+=dragK*.12;lhG.position.z-=tg;lhG.position.y+=dragK*.05;lhG.rotation.y+=dragK*.15}
-if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){if(goldenState)untintGold(held);held.u.held=false;held.u.rest=true;held.u.v.set(0,0,0);held.position.set(P.x+9000,700,P.z+9000);held=null;$('gb').textContent='Grab'}if(eatT>=EAT_DUR)eatT=-1}
+if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.held=false;held.u.rest=true;held.u.v.set(0,0,0);held.position.set(P.x+9000,700,P.z+9000);held=null;$('gb').textContent='Grab'}if(eatT>=EAT_DUR)eatT=-1}
 if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompose(_hp,_hq,new T.Vector3());
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
@@ -1613,37 +1583,6 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
       if(u.v.y<-2){u.v.y*=-(u.b||.3);u.v.x*=.7;u.v.z*=.7}else{u.v.y=0;u.v.x*=.85;u.v.z*=.85;if(Math.hypot(u.v.x,u.v.z)<.4){u.rest=true;u.skip=0}}}}
   if(i===fr%rocks.length&&(u.rest||u.fl)&&r.position.distanceToSquared(P)>3600)place(r);
   if(u.kind===4&&r.position.distanceToSquared(P)<3){orbs++;sfx('orb');hud('orb!');place(r)}}
-// HENGE GEM: held gem follows hand, then embeds after 5s
-if(heldGem){
-  goldenT+=dt;
-  if(heldGem.material&&heldGem.material.emissiveIntensity!==undefined)heldGem.material.emissiveIntensity=.55+.5*Math.sin(U.uT.value*9);
-  if(goldenT<4.5){
-    holdSocket.updateWorldMatrix(true,false);
-    holdSocket.matrixWorld.decompose(_hp,_hq,_gemScale);
-    heldGem.position.lerp(_hp,Math.min(1,dt*11));
-    heldGem.quaternion.slerp(_hq,Math.min(1,dt*8));
-  } else {
-    const k=Math.min(1,(goldenT-4.5)/.5), kk=k*k*(3-2*k);
-    heldGem.position.x+=(P.x-heldGem.position.x)*Math.min(1,dt*8+kk*.35);
-    heldGem.position.y+=((P.y+1.05)-heldGem.position.y)*Math.min(1,dt*8+kk*.35);
-    heldGem.position.z+=(P.z-heldGem.position.z)*Math.min(1,dt*8+kk*.35);
-    heldGem.scale.setScalar(1-kk*.5);
-  }
-  if(goldenT>=5){
-    heldGem.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});
-    scene.remove(heldGem);
-    heldGem=null;goldenState=true;goldenT=-1;
-    sfx('launch');shake(.55);ripple(P.x,P.z,1.8);
-    if(!goldenAura){
-      goldenAura=new T.Sprite(new T.SpriteMaterial({map:halo,color:0xffd76a,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.5}));
-      goldenAura.scale.set(6,6,1);goldenAura.position.set(0,2,0);me.root.add(goldenAura);
-    }
-    const _e=document.getElementById('bn');
-    if(_e){_e.innerHTML='<small>absorbed</small>golden';_e.classList.add('on');clearTimeout(bt);bt=setTimeout(()=>_e.classList.remove('on'),4200)}
-    addMsg('✦','the golden gem sinks into your chest',1.0);
-  }
-}
-if(goldenAura)goldenAura.material.opacity=.35+.2*Math.sin(U.uT.value*3);
 if(inGame&&!RG.on){mergeT-=dt;if(mergeT<=0){mergeT=.35;tryMergeBurgers()}}
 portalTick(dt)
 if(inGame&&!RG.on){skyBreakerTick(dt);trySkyBreakerCraft(dt)}
