@@ -730,6 +730,7 @@ function regen(q,keepPos){
   inBoat=false;mySeat=-1;boat.occupants=[null,null];boat.speed=0;const lb=document.getElementById('lb');if(lb)lb.style.display='none';
   runToggle=false;syncRunBtn();
   {const cx=P.x,cz=P.z;let placed=false;for(let rr=6;rr<=80&&!placed;rr+=2){for(let k=0;k<32;k++){const a=k*(6.2832/32);const x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr;if(H(x,z)<-1.2){boat.root.position.set(x,0,z);boat.heading=Math.atan2(cx-x,cz-z);placed=true;break}}}if(!placed){const dir=Math.atan2(P.x-cx,P.z-cz);boat.root.position.set(cx+Math.sin(dir)*20,0,cz+Math.cos(dir)*20)}boat.root.rotation.y=boat.heading}
+  spawnAllPads();
 }
 const MUSIC="Bloxiest Licka.mp3",MUSIC_VOLUME=.2;
 let musicEl=null;
@@ -1349,9 +1350,12 @@ if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transf
 else{$('gb').style.transform=''}
 if(trauma>0){trauma=Math.max(0,trauma-dt*1.4);const s=trauma*trauma,q=t*28;cam.rotation.x+=(vn(q,3.1)-.5)*.1*s;cam.rotation.y+=(vn(q,7.7)-.5)*.1*s;cam.rotation.z+=(vn(q,11.3)-.5)*.16*s;cam.position.x+=(vn(q,1.9)-.5)*.18*s;cam.position.y+=(vn(q,5.3)-.5)*.18*s}
 if(fr%10===0){const _d=document.getElementById('padDbg');if(_d)_d.textContent='PADS:'+padPool.length+' POOL:'+pool.length+' RDY:'+(padReady?1:0);}rd.render(scene,cam);reflectPass(uw)}
-padReady=true;
-for(const c of pool)if(c.cx!==1e9)trySpawnPad(c.cx*CS,c.cz*CS);
-(function spawnDebugPad(){const px=P.x, pz=P.z+6, py=H(px,pz);const g=new T.Group();g.position.set(px,py+.25,pz);const m=new T.Mesh(padG,padM);m.castShadow=true;g.add(m);const sp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0x66ddff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.7}));sp.position.y=.55;sp.scale.set(4,4,1);g.add(sp);scene.add(g);g.userData.gk='debug-first';g.userData.cx=px;g.userData.cz=pz;g.userData.cy=py;g.userData.cooldown=0;padPool.push(g);console.log('[PAD-DEBUG] at',px.toFixed(1),py.toFixed(1),pz.toFixed(1));})();
+function spawnAllPads(){
+  padReady=true;
+  for(const c of pool)if(c.cx!==1e9)trySpawnPad(c.cx*CS,c.cz*CS);
+  (function spawnDebugPad(){const px=P.x, pz=P.z-6, py=H(px,pz);const g=new T.Group();g.position.set(px,py+.25,pz);const m=new T.Mesh(padG,padM);m.castShadow=true;g.add(m);const sp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0x66ddff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.9}));sp.position.y=.55;sp.scale.set(5,5,1);g.add(sp);scene.add(g);g.userData.gk='debug-'+Math.random().toString(36).slice(2,6);g.userData.cx=px;g.userData.cz=pz;g.userData.cy=py;g.userData.cooldown=0;padPool.push(g);console.log('[PAD-DEBUG] at',px.toFixed(1),py.toFixed(1),pz.toFixed(1));})();
+}
+spawnAllPads();
 const padDbg=document.createElement('div');padDbg.id='padDbg';padDbg.style.cssText='position:fixed;right:8px;top:70px;background:#c00;color:#fff;padding:4px 10px;font:bold 13px monospace;z-index:9999;border-radius:6px;pointer-events:none';padDbg.textContent='PADS:'+padPool.length;document.body.appendChild(padDbg);
 requestAnimationFrame(loop);
 </script>
