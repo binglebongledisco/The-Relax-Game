@@ -1011,18 +1011,16 @@ function stopDrag(){if(dragging && rm)rm.emit('release',{to:dragging});dragging=
 function dropItem(){
   if(!held)return;
   const u=held.u,ix=u.idx;
-  const flen=Math.hypot(fw.x,fw.z)||1;
-  const px=P.x+fw.x/flen*1.5,pz=P.z+fw.z/flen*1.5;
-  let py=H(px,pz)+u.r*0.5;
-  u.held=false;u.remoteHeld=null;u.skip=0;
-  if(u.fl&&py<0){py=0;u.rest=false}else{u.rest=true}
-  held.position.set(px,py,pz);
-  u.v.set(0,0,0);
+  // Same physics path as toss, but with a tiny forward nudge so it just falls.
+  u.held=false;u.rest=false;u.remoteHeld=null;u.skip=0;
+  u.v.copy(fw).multiplyScalar(1.5);
+  u.v.y=0.5;
+  u.v.addScaledVector(P.v,0.5);
   u.o=held.position.clone();
   u.thrownBy=rm?rm.id:'me';
   u.thrownAt=performance.now();u.sw=0;
   sfx('click');
-  if(rm)rm.emit('thr',{i:ix,p:[+px.toFixed(2),+py.toFixed(2),+pz.toFixed(2)],v:[0,0,0]});
+  if(rm)rm.emit('thr',{i:ix,p:held.position.toArray().map(x=>+x.toFixed(2)),v:u.v.toArray().map(x=>+x.toFixed(2))});
   held=null;$('gb').textContent='Grab';
 }
 function toss(f){
