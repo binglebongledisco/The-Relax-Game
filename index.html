@@ -1151,7 +1151,7 @@ const keys={},mv={x:0,y:0};let joy=null,jo=[0,0],look=null,lx=0,ly=0,jump=false,
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='KeyE'&&!keys.KeyE)gt=performance.now();keys[e.code]=1;if(e.code==='Space')jump=true});
 addEventListener('keyup',e=>{keys[e.code]=0;if(e.target.tagName==='INPUT')return;if(e.code==='Space')jump=false;if(e.code==='KeyE')act()});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=0;jump=false});
-function act(){if(myKo>0)return;if(held)toss(Math.min((performance.now()-gt)/800,1));else if(dragging)stopDrag();else grab()}
+function act(){if(myKo>0)return;if(eatT>=0)return;if(held)toss(Math.min((performance.now()-gt)/800,1));else if(dragging)stopDrag();else grab()}
 $('gb').onpointerdown=e=>{e.preventDefault();gt=performance.now();try{$('gb').setPointerCapture(e.pointerId)}catch(_){}};
 $('gb').onpointerup=act;
 $('gb').onpointercancel=()=>{gt=0;$('gb').style.transform=''};
@@ -1159,6 +1159,7 @@ $('jb').onpointerdown=e=>{e.preventDefault();jump=true;try{$('jb').setPointerCap
 $('jb').onpointerup=$('jb').onpointercancel=()=>jump=false;
 $('lb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();leaveBoat()};
 $('rb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();toggleRun()};
+$('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(held&&held.u.kind===6&&eatT<0){eatT=0;sfx('eat')}};
 const downPtrs=new Set();
 function releasePtr(id){
   downPtrs.delete(id);
@@ -1300,7 +1301,7 @@ else{
 if((tp||emote>0)&&myKo<=0&&!pulledBy){cam.position.addScaledVector(fw,-3.4).addScaledVector(rt,.5);cam.position.y=Math.max(cam.position.y,H(cam.position.x,cam.position.z)+.4)}
 const uw=cam.position.y<0;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
 if(!uw)fogC.copy(FOG0);
-const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && !RG.on && (!!held||!!dragging);
+const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && !RG.on && (!!held||!!dragging||eatT>=0);
 handVis+=((wantHand?1:0)-handVis)*Math.min(1,dt*7);
 handR.visible=handVis>0.02;lhVis+=(((wantHand&&dragging)?1:0)-lhVis)*Math.min(1,dt*7);lhG.visible=handR.visible&&lhVis>.02;
 if(handR.visible){const e=handVis*handVis*(3-2*handVis);const idle=U.uT.value;const spdMag=Math.min(1,Math.hypot(P.v.x,P.v.z)/5.2);
@@ -1314,6 +1315,7 @@ holdK+=((held?1:0)-holdK)*Math.min(1,dt*9);handR.position.y+=holdK*.06;handR.rot
 lhG.position.set(-.36-breathX-walkBob,-.27+Math.sin(idle*1.2+1)*.007+Math.cos(bobT*2+1)*.018*spdMag*(1+runK*.5)+(1-lhVis*lhVis*(3-2*lhVis))*-.55+runK*.08,-.55+runK*.02-sw);
 lhG.rotation.set(-.25+Math.sin(idle*1.2+1)*.02-runK*.12+sw*2.2,-.1-Math.cos(idle*.8)*.015,-.15+walkBob*.8);
 dragK+=((dragging?1:0)-dragK)*Math.min(1,dt*8);{const tg=Math.sin(idle*5)*.03*dragK;handR.position.x-=dragK*.12;handR.position.z+=tg;handR.position.y+=dragK*.05;handR.rotation.y-=dragK*.15;lhG.position.x+=dragK*.12;lhG.position.z-=tg;lhG.position.y+=dragK*.05;lhG.rotation.y+=dragK*.15}
+if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.held=false;held.u.rest=true;held.u.v.set(0,0,0);held.position.set(P.x+9000,700,P.z+9000);held=null;$('gb').textContent='Grab'}if(eatT>=EAT_DUR)eatT=-1}
 if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompose(_hp,_hq,new T.Vector3());
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
@@ -1364,6 +1366,7 @@ for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t
 {const ic=inCave();sun.intensity+=((ic?.35:1.1)-sun.intensity)*Math.min(1,dt*3)}
 poiTick(dt,t);if(fr%6===0)mixAudio(uw);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
+$('ebt').style.display=(held&&held.u.kind===6&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
 else{$('gb').style.transform=''}
 if(trauma>0){trauma=Math.max(0,trauma-dt*1.4);const s=trauma*trauma,q=t*28;cam.rotation.x+=(vn(q,3.1)-.5)*.1*s;cam.rotation.y+=(vn(q,7.7)-.5)*.1*s;cam.rotation.z+=(vn(q,11.3)-.5)*.16*s;cam.position.x+=(vn(q,1.9)-.5)*.18*s;cam.position.y+=(vn(q,5.3)-.5)*.18*s}
