@@ -1638,9 +1638,9 @@ function destroyPyramid(){
   PYRAMID.active=false;PYRAMID.phase='idle';PYRAMID.t=0;PYRAMID.marker=null;
 }
 
-function buildPyramid(ox,oz){
+function buildPyramid(ox,oz,baseY){
   destroyPyramid();
-  const y0=H(ox,oz);
+  const y0=(typeof baseY==='number'&&isFinite(baseY))?baseY:H(ox,oz);
   const half=42,innerHalf=8,inset=3,stepH=2.5,wallT=3,steps=11;
   const g=new T.Group();g.position.set(ox,y0,oz);
   const stoneA=new T.MeshLambertMaterial({color:0xc8b48a});
@@ -1719,19 +1719,48 @@ function buildPyramid(ox,oz){
 }
 
 function buildPyramidNear(){
-  for(let r=60;r<160;r+=10){
-    for(let a=0;a<16;a++){
-      const an=a*(6.2832/16);
+  function trySite(x,z,maxRange){
+    if(inPit(x,z))return -1;
+    let hmin=1e9,hmax=-1e9;
+    const N=8,Ex=50;
+    for(let i=0;i<=N;i++){
+      for(let j=0;j<=N;j++){
+        const sx=x+(i/N-.5)*Ex*2,sz=z+(j/N-.5)*Ex*2;
+        const hh=H(sx,sz);
+        if(hh<-0.5||hh>25)return -1;
+        if(hh<hmin)hmin=hh;
+        if(hh>hmax)hmax=hh;
+      }
+    }
+    if(hmax-hmin>maxRange)return -1;
+    return hmin;
+  }
+  // Strict pass: footprint must be nearly flat
+  for(let r=70;r<260;r+=12){
+    for(let a=0;a<24;a++){
+      const an=a*(6.2832/24)+r*0.07;
+      const x=P.x+Math.cos(an)*r,z=P.z+Math.sin(an)*r;
+      const base=trySite(x,z,3);
+      if(base>=0){buildPyramid(x,z,base-0.3);return}
+    }
+  }
+  // Relaxed pass: allow a little more variation
+  for(let r=70;r<260;r+=12){
+    for(let a=0;a<24;a++){
+      const an=a*(6.2832/24)+r*0.11;
+      const x=P.x+Math.cos(an)*r,z=P.z+Math.sin(an)*r;
+      const base=trySite(x,z,6);
+      if(base>=0){buildPyramid(x,z,base-0.3);return}
+    }
+  }
+  // Fallback: any dry spot in range
+  for(let r=70;r<260;r+=12){
+    for(let a=0;a<24;a++){
+      const an=a*(6.2832/24);
       const x=P.x+Math.cos(an)*r,z=P.z+Math.sin(an)*r;
       const h=H(x,z);
-      if(h<2||h>16)continue;
-      let ok=true;
-      for(const[cx,cz]of[[-40,-40],[40,-40],[-40,40],[40,40],[0,0]]){
-        const hh=H(x+cx,z+cz);
-        if(Math.abs(hh-h)>8){ok=false;break}
-      }
-      if(!ok)continue;
-      buildPyramid(x,z);
+      if(h<0.5||h>20||inPit(x,z))continue;
+      buildPyramid(x,z,h-0.3);
       return;
     }
   }
