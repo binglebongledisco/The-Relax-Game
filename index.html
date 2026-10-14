@@ -691,137 +691,6 @@ function leaveBoat(){if(!inBoat)return;
   for(let d=2.6;d<=9&&!fd;d+=1.2)for(const s of[1,-1,0]){const x=bx+(s?rx*s*d:-Math.sin(boat.heading)*d),z=bz+(s?rz*s*d:-Math.cos(boat.heading)*d),h=H(x,z);if(h>-.2&&h<5&&!inPit(x,z)){ex=x;ez=z;fd=1;break}}
   P.x=ex;P.z=ez;const gg=H(P.x,P.z);P.y=Math.max(gg,0.05);P.v.set(0,fd?3:4,0);
   const lb=document.getElementById('lb');if(lb)lb.style.display='none'}
-// ==== CARS ====
-const carWheelG=(()=>{const P=[];
-P.push([new T.CylinderGeometry(.42,.42,.34,16).rotateZ(Math.PI/2),new M4(),[.09,.09,.1],0,()=>1]);
-P.push([new T.CylinderGeometry(.2,.2,.36,12).rotateZ(Math.PI/2),new M4(),[.72,.73,.75],0,()=>1]);
-for(let k=0;k<5;k++){const a=k/5*6.2832;P.push([new T.BoxGeometry(.06,.06,.36),mt(Math.cos(a)*.3,Math.sin(a)*.3,0).multiply(new M4().makeRotationZ(a)),[.55,.55,.58],0,()=>1])}
-return mergeParts(P)})();
-function mkCarMesh(){
-  const g=new T.Group(),P=[];
-  const body=[.34,.42,.26],dark=[.13,.14,.16];
-  const bx=(w,h,d,x,y,z,c,rx,ry,rz)=>P.push([new T.BoxGeometry(w,h,d),mt(x,y,z).multiply(new M4().makeRotationFromEuler(new T.Euler(rx||0,ry||0,rz||0))),c,0,()=>1]);
-  bx(1.55,.3,3.5,0,.6,0,body);
-  bx(1.75,.7,3.4,0,1.05,0,body);
-  bx(1.65,.4,1.1,0,1.25,1.35,body);
-  bx(1.6,.55,.08,0,1.05,1.9,dark);
-  for(let k=0;k<7;k++)bx(.1,.55,.1,-.6+k*.2,1.05,1.92,dark);
-  bx(1.85,.15,.22,0,.75,2.0,dark);
-  bx(1.85,.15,.22,0,.75,-1.85,dark);
-  bx(1.6,.9,.08,0,1.65,.35,body,.4);
-  bx(1.55,.06,1.7,0,1.4,-.45,dark);
-  bx(1.75,.7,.15,0,1.05,-1.7,body);
-  for(const s of[-1,1]){bx(.15,.32,1.15,s*.9,.65,1.4,body);bx(.15,.32,1.15,s*.9,.65,-1.4,body)}
-  for(const[xx,zz]of[[-.4,.15],[.4,.15],[-.4,-.75],[.4,-.75]]){
-    bx(.42,.16,.5,xx,1.5,zz,[.28,.32,.24]);
-    bx(.42,.65,.16,xx,1.82,zz-.3,[.28,.32,.24]);
-  }
-  P.push([new T.TorusGeometry(.18,.03,6,16).rotateX(.5),mt(-.4,1.95,.75),dark,0,()=>1]);
-  P.push([new T.CylinderGeometry(.04,.04,.4,6).rotateX(.5),mt(-.4,1.75,.85),dark,0,()=>1]);
-  P.push([new T.CylinderGeometry(.05,.05,1.9,8).rotateZ(Math.PI/2),mt(0,2.35,-.55),dark,0,()=>1]);
-  for(const s of[-1,1])P.push([new T.CylinderGeometry(.05,.05,.95,8),mt(s*.9,1.9,-.55),dark,0,()=>1]);
-  const bodyM=new T.Mesh(mergeParts(P),new T.MeshPhongMaterial({vertexColors:true,shininess:25,specular:0x2a2a2a}));
-  bodyM.castShadow=true;g.add(bodyM);
-  const wheelMat=new T.MeshLambertMaterial({vertexColors:true});
-  const wheelPos=[[-.95,.42,1.4],[.95,.42,1.4],[-.95,.42,-1.4],[.95,.42,-1.4]];
-  const wheels=wheelPos.map(p=>{
-    const pivot=new T.Group();pivot.position.set(p[0],p[1],p[2]);
-    const w=new T.Mesh(carWheelG,wheelMat);w.castShadow=true;
-    pivot.add(w);g.add(pivot);
-    return {pivot,mesh:w,steerable:p[2]>0};
-  });
-  const spare=new T.Mesh(carWheelG,wheelMat);spare.rotation.y=Math.PI/2;spare.position.set(0,1.1,-1.95);spare.scale.setScalar(.9);spare.castShadow=true;g.add(spare);
-  const hlM=new T.MeshPhongMaterial({color:0xfff5cc,emissive:0xffeeaa,emissiveIntensity:.45,shininess:160});
-  for(const s of[-1,1]){const h=new T.Mesh(new T.CylinderGeometry(.15,.15,.08,10).rotateX(Math.PI/2),hlM);h.position.set(s*.62,1.05,2.02);g.add(h)}
-  return {root:g,wheels};
-}
-function applyCarTilt(car){
-  const e=1.3,x=car.root.position.x,z=car.root.position.z;
-  const fx=Math.sin(car.heading),fz=Math.cos(car.heading);
-  const hF=H(x+fx*e,z+fz*e),hB=H(x-fx*e,z-fz*e);
-  const hL=H(x+fz*e,z-fx*e),hR=H(x-fz*e,z+fx*e);
-  const pitch=Math.atan2(hF-hB,2*e);
-  const roll=Math.atan2(hL-hR,2*e);
-  car.root.rotation.order='YXZ';
-  car.root.rotation.set(pitch,car.heading,roll);
-  car.root.position.y=H(x,z)+.02;
-}
-const CARS=[],CAR_N=4;
-function spawnCar(){
-  const m=mkCarMesh();scene.add(m.root);
-  return {root:m.root,wheels:m.wheels,
-    seats:[new V3(-.4,1.5,.15),new V3(.4,1.5,.15),new V3(-.4,1.5,-.75),new V3(.4,1.5,-.75)],
-    occupants:[null,null,null,null],
-    heading:0,speed:0,steer:0};
-}
-function placeCar(car,x,z,h){
-  car.root.position.set(x,H(x,z)+.02,z);
-  car.heading=h||0;car.root.rotation.y=car.heading;car.speed=0;car.steer=0;
-}
-function spawnCars(){
-  const cx=P.x,cz=P.z;let placed=0;
-  for(let r=8;r<=150&&placed<CAR_N;r+=4){
-    for(let k=0;k<24&&placed<CAR_N;k++){
-      const a=k*(6.2832/24)+placed*.77;
-      const x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r,h=H(x,z);
-      if(h<1.2||h>16)continue;
-      const e=1.5,sl=Math.hypot(H(x+e,z)-H(x-e,z),H(x,z+e)-H(x,z-e))/(2*e);
-      if(sl>.32)continue;
-      const cc=cave(x,z);if(cc&&Math.hypot(x-cc.x,z-cc.z)<11)continue;
-      const car=spawnCar();placeCar(car,x,z,a+Math.PI);
-      CARS.push(car);placed++;
-    }
-  }
-  for(let i=CARS.length;i<CAR_N;i++){
-    const a=i*(6.2832/CAR_N)+.3,r=10+i*4;
-    const x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;
-    const car=spawnCar();placeCar(car,x,z,a);
-    CARS.push(car);
-  }
-}
-spawnCars();
-let inCar=false,myCarIdx=-1,myCarSeat=-1;
-const carSeatW=new V3();
-function enterCar(ci,s){
-  if(inCar||inBoat)return;
-  const car=CARS[ci];if(!car||car.occupants[s]!==null)return;
-  inCar=true;myCarIdx=ci;myCarSeat=s;car.occupants[s]='me';
-  if(held)toss(0);
-  $('lb').style.display='block';$('lb').textContent='Leave car';
-  bpUpdate(null);
-}
-function leaveCar(){
-  if(!inCar)return;
-  const car=CARS[myCarIdx];
-  if(car&&myCarSeat>=0&&car.occupants[myCarSeat]==='me')car.occupants[myCarSeat]=null;
-  if(car){
-    const rx=Math.cos(ya),rz=-Math.sin(ya);
-    const bx=car.root.position.x,bz=car.root.position.z;
-    let ex=bx+rx*3.5,ez=bz+rz*3.5,fd=0;
-    for(let d=3;d<=9&&!fd;d+=1.2)for(const s of[1,-1,0]){
-      const x=bx+(s?rx*s*d:-Math.sin(car.heading)*d),z=bz+(s?rz*s*d:-Math.cos(car.heading)*d),h=H(x,z);
-      if(h>-.2&&!inPit(x,z)){ex=x;ez=z;fd=1;break}
-    }
-    P.x=ex;P.z=ez;const gg=H(P.x,P.z);P.y=Math.max(gg,0.05);P.v.set(0,fd?3:4,0);
-  }
-  inCar=false;myCarIdx=-1;myCarSeat=-1;
-  $('lb').style.display='none';
-}
-function carIdle(dt){
-  for(let i=0;i<CARS.length;i++){
-    if(inCar&&i===myCarIdx)continue;
-    const car=CARS[i];
-    if(Math.abs(car.speed)>.05){
-      car.speed*=Math.max(0,1-dt*1.4);
-      const dx=Math.sin(car.heading)*car.speed*dt,dz=Math.cos(car.heading)*car.speed*dt;
-      const nx=car.root.position.x+dx,nz=car.root.position.z+dz;
-      if(H(nx,nz)>-.3){car.root.position.x=nx;car.root.position.z=nz}else car.speed=0;
-    } else car.speed=0;
-    car.steer*=Math.max(0,1-dt*4);
-    applyCarTilt(car);
-    for(const w of car.wheels){if(w.steerable)w.pivot.rotation.y=car.steer;w.mesh.rotation.x-=car.speed*dt*1.8}
-  }
-}
 // ==== /CARS ====
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
 const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1,eatChomped=0;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
@@ -1004,9 +873,6 @@ function regen(q,keepPos){
   inBoat=false;mySeat=-1;boat.occupants=[null,null];boat.speed=0;const lb=document.getElementById('lb');if(lb)lb.style.display='none';
   runToggle=false;syncRunBtn();
   {const cx=P.x,cz=P.z;let placed=false;for(let rr=6;rr<=80&&!placed;rr+=2){for(let k=0;k<32;k++){const a=k*(6.2832/32);const x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr;if(H(x,z)<-1.2){boat.root.position.set(x,0,z);boat.heading=Math.atan2(cx-x,cz-z);placed=true;break}}}if(!placed){const dir=Math.atan2(P.x-cx,P.z-cz);boat.root.position.set(cx+Math.sin(dir)*20,0,cz+Math.cos(dir)*20)}boat.root.rotation.y=boat.heading}
-  for(const c of CARS){scene.remove(c.root)}
-  CARS.length=0;inCar=false;myCarIdx=-1;myCarSeat=-1;if($('lb'))$('lb').style.display='none';
-  spawnCars();
   spawnAllPads();
 }
 const MUSIC="Bloxiest Licka.mp3",MUSIC_VOLUME=.2;
@@ -1314,7 +1180,7 @@ $('ci').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendChat()}if(e.key
 
 // ============ PORTALS & DIMENSIONS ============
 const DD=[{n:'Rock Dimension',sky:'#2b1f1c',fog:'#9a7a66',fl:'#6a5648',col:'#ff9a4a',y:500},{n:'Mushroom Dimension',sky:'#14062e',fog:'#8a45c0',fl:'#33205a',col:'#7cffd4',y:560}],DG=[null,null],FL=[],YA=new T.Vector3(0,1,0),_pq=new T.Quaternion(),_pv=new T.Vector3(),_cp=new T.Vector3(),_c3=new T.Vector3(),_cq=new T.Quaternion(),_c4=new T.Quaternion(),DIM={ret:null};
-let PORT=null,PC=null,PCL=null,tpSave=false,bnear=null,GS=1,BURST=null;
+let PORT=null,PC=null,PCL=null,tpSave=false,bnear=-1,GS=1,BURST=null;
 function rngF(s){let a=s>>>0||1;return()=>{a=(a+0x6D2B79F5)>>>0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function spaceOf(y){return y<400?-1:y>530?1:0}
 function remVis(sp){for(const id in rem){const r=rem[id];r.root.visible=spaceOf(r.root.position.y)===sp}}
@@ -1390,9 +1256,9 @@ function cineCam(p){const S=x=>x*x*(3-2*x),cl=x=>Math.min(1,Math.max(0,x)),L=(a,
  tx=P.x+Fx*f,tz=P.z+Fz*f,ty=P.y+(p<.5?.8:L(.8,1.5,(p-.5)/.32)),c=Math.cos(th),s=Math.sin(th);
  _cp.copy(cam.position);_cq.copy(cam.quaternion);cam.position.set(tx+(-Fx*c-Fz*s)*r,Math.max(P.y+.5+h,H(tx,tz)+.7),tz+(Fx*s-Fz*c)*r);cam.lookAt(tx,ty,tz);
  _c3.copy(cam.position);_c4.copy(cam.quaternion);cam.position.copy(_cp).lerp(_c3,k);cam.quaternion.copy(_cq).slerp(_c4,k);skyM.position.copy(cam.position)}
-function bpUpdate(n){if(n===bnear)return;bnear=n;const b=$('bprompt');if(!n){b.style.display='none';return}b.style.display='block';if(n.type==='boat')b.textContent=n.seat===0?'🚤 Drive (E)':'💺 Seat (E)';else b.textContent=n.seat===0?'🚗 Drive (E)':'💺 Seat (E)'}
-function boardBoat(s){if(inBoat||inCar||boat.occupants[s]!==null)return;inBoat=true;mySeat=s;boat.occupants[s]='me';if(held)toss(0);$('lb').style.display='block';$('lb').textContent='Leave boat';bpUpdate(null)}
-$('bprompt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(!bnear)return;if(bnear.type==='boat')boardBoat(bnear.seat);else enterCar(bnear.car,bnear.seat)};
+function bpUpdate(n){if(n===bnear)return;bnear=n;const b=$('bprompt');b.style.display=n<0?'none':'block';b.textContent=n===0?'🚤 Drive (E)':'💺 Seat (E)'}
+function boardBoat(s){if(inBoat||boat.occupants[s]!==null)return;inBoat=true;mySeat=s;boat.occupants[s]='me';if(held)toss(0);$('lb').style.display='block';bpUpdate(-1)}
+$('bprompt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(bnear>=0)boardBoat(bnear)};
 const mmc=$('mm'),mx=mmc.getContext('2d');let mmT=0;
 function miniMap(){if(!SET.minimap||!inGame||chatOpenF||performance.now()<mmHideUntil){mmc.style.display='none';return}const now=performance.now();if(now-mmT<(PERF?520:180))return;mmT=now;mmc.style.display='block';mmc.style.top=Math.ceil($('st').getBoundingClientRect().bottom+6)+'px';
  const N=24,C=4,cs=Math.cos(ya),sn=Math.sin(ya),sc=48/60;
@@ -1428,7 +1294,7 @@ function portalTick(dt){const t=U.uT.value;if(cutT>0&&!(PC&&PC.mine))cutT=Math.m
  if(DIMON){const s=5-P.z,hy=P.y-DIMY;if(cutT<=0&&GS>0&&s<=0&&s>-1.2&&Math.abs(P.x)<1.8&&hy<3.6)leaveDim();else GS=s;const d=Math.hypot(P.x,P.z);if(d>76){P.x*=76/d;P.z*=76/d}}
  else if(PORT&&!PC&&PORT.rv>=.999&&cutT<=0){const dx=P.x-PORT.x,dz=P.z-PORT.z,s=dx*Math.sin(PORT.a)+dz*Math.cos(PORT.a),u=dx*Math.cos(PORT.a)-dz*Math.sin(PORT.a),hy=P.y-PORT.y;
   if(PORT.ps>0&&s<=0&&s>-1.2&&Math.abs(u)<1.8&&hy>-1&&hy<3.6)enterDim();else PORT.ps=s}
- if(inBoat||inCar||myKo>0||DIMON||cutT>0)bpUpdate(null);dimBtnSync();miniMap()}
+ if(inBoat||myKo>0||DIMON||cutT>0)bpUpdate(-1);dimBtnSync();miniMap()}
 function toggleDimPick(){if(DIMON){hud('Return through the gate first');return}const e=$('dimp');e.style.display=e.style.display==='flex'?'none':'flex'}
 $('dimg').innerHTML=DD.map((d,i)=>'<button class="pb" data-i="'+i+'">'+(i?'🍄':'🪨')+' '+d.n+'</button>').join('');
 $('dimg').onclick=e=>{const b=e.target.closest('button');if(b)reqPortal(+b.dataset.i)};$('dimx').onclick=()=>$('dimp').style.display='none';$('dimc').onclick=()=>{if(!PORT)hud('No portal is open');else closePortal(true)};
@@ -1508,7 +1374,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyV')tp=!tp;
   if(/^Digit[1-7]$/.test(e.code)){emote=[2,3,4,5,6,11,12][+e.code[5]-1];syncBar()}
   if(e.code==='KeyF'&&rm){if(dragging)stopDrag();else grab()}
-  if(e.code==='KeyI')toggleInv();if(e.code==='KeyQ')storeHeld();if(e.code==='KeyE'&&bnear){if(bnear.type==='boat')boardBoat(bnear.seat);else enterCar(bnear.car,bnear.seat)}
+  if(e.code==='KeyI')toggleInv();if(e.code==='KeyQ')storeHeld();if(e.code==='KeyE'&&bnear>=0)boardBoat(bnear);
   if(e.code==='KeyB'&&rm&&rm.isHost)rm.emit('bringAll',{});
 });
 addEventListener('beforeunload',()=>{try{rm&&rm.leave()}catch(e){}});
@@ -1536,7 +1402,7 @@ $('gb').onpointerup=act;
 $('gb').onpointercancel=()=>{gt=0;$('gb').style.transform=''};
 $('jb').onpointerdown=e=>{e.preventDefault();jump=true;try{$('jb').setPointerCapture(e.pointerId)}catch(_){}};
 $('jb').onpointerup=$('jb').onpointercancel=()=>jump=false;
-$('lb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(inCar)leaveCar();else leaveBoat()};
+$('lb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();leaveBoat()};
 $('rb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();toggleRun()};
 $('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(held&&held.u.kind===6&&eatT<0){eatT=0;eatChomped=0}};
 const downPtrs=new Set();
@@ -1580,7 +1446,7 @@ let iy=cutT>0?0:Math.max(-1,Math.min(1,mv.y+(keys.KeyW||keys.ArrowUp?1:0)-(keys.
 const sy=Math.sin(ya),cy=Math.cos(ya),g=H(P.x,P.z);
 const swim=!inBoat&&g<-0.6&&P.y<1.0;
 const k=Math.min(1,dt*(swim?4:10));
-running = runToggle && !inBoat && !inCar && !swim && !dragging;
+running = runToggle && !inBoat && !swim && !dragging;
 if(myKo>0){P.v.y-=18*dt;P.y+=P.v.y*dt;const gg=H(P.x,P.z);if(P.y<=gg){P.y=gg;P.v.y=0}
   P.v.x*=1-3*dt;P.v.z*=1-3*dt;P.x+=P.v.x*dt;P.z+=P.v.z*dt;resolvePointCollisions(P,P.y,0.4);
   const E2=x=>x*x*(3-2*x),fall=myKo>1.65?E2((2-myKo)/.35):myKo<.6?E2(myKo/.6):1;cam.position.set(P.x,P.y+1.6-fall*1.0,P.z);cam.rotation.set(pt+fall*0.9,ya,0);
@@ -1592,55 +1458,17 @@ else if(pulledBy){P.lerp(pullTo,1-Math.exp(-dt*14));const gg=H(P.x,P.z);if(P.y<g
   me.root.visible=true;me.hd.visible=tp||emote>0;me.root.position.set(P.x,P.y,P.z);me.root.rotation.y=byaw;
   pose(me,U.uT.value,ph,spd,10,!!held,0,false);net(dt,U.uT.value,spd,0);if(fr%30===0)hud()}
 else{
-  if(!inBoat&&!inCar){
-    boat.root.updateMatrixWorld();let bn=null,bnd=9;
+  if(!inBoat){
+    boat.root.updateMatrixWorld();let bn=-1,bnd=9;
     for(let s=0;s<2;s++){
       if(boat.occupants[s]!==null)continue;
       boatSeatW.copy(boat.seats[s]).applyMatrix4(boat.root.matrixWorld);
       const bdx=P.x-boatSeatW.x,bdz=P.z-boatSeatW.z;
-      const bd2=bdx*bdx+bdz*bdz;if(bd2<bnd){bn={type:'boat',seat:s};bnd=bd2}
+      const bd2=bdx*bdx+bdz*bdz;if(bd2<5&&bd2<bnd){bn=s;bnd=bd2}
     }
-    for(let _i=0;_i<CARS.length;_i++){
-      const _car=CARS[_i];_car.root.updateMatrixWorld();
-      for(let _s=0;_s<4;_s++){
-        if(_car.occupants[_s]!==null)continue;
-        carSeatW.copy(_car.seats[_s]).applyMatrix4(_car.root.matrixWorld);
-        const _cdx=P.x-carSeatW.x,_cdz=P.z-carSeatW.z;
-        const _cd2=_cdx*_cdx+_cdz*_cdz;if(_cd2<bnd){bn={type:'car',car:_i,seat:_s};bnd=_cd2}
-      }
-    }
-    bpUpdate(bn);
+    bpUpdate(bn);boatIdle(dt);
   }
-  boatIdle(dt);carIdle(dt);
-  if(inCar){const car=CARS[myCarIdx];
-    if(!car){leaveCar()}
-    else{const driver=myCarSeat===0,maxSpeed=22;
-      if(driver){const fwd=iy,turn=-ix;
-        car.speed+=(fwd*maxSpeed-car.speed)*Math.min(1,dt*1.3);
-        car.steer+=(turn*.55-car.steer)*Math.min(1,dt*7);
-        if(Math.abs(car.speed)>.05)car.heading+=car.steer*dt*1.6*Math.max(.15,Math.abs(car.speed)/maxSpeed);
-        const dx=Math.sin(car.heading)*car.speed*dt,dz=Math.cos(car.heading)*car.speed*dt;
-        const nx=car.root.position.x+dx,nz=car.root.position.z+dz;
-        if(H(nx,nz)>-.3){car.root.position.x=nx;car.root.position.z=nz}else{car.speed*=.1}
-      }else{car.speed*=Math.max(0,1-dt*1.2);car.steer*=Math.max(0,1-dt*5)}
-      applyCarTilt(car);
-      for(const w of car.wheels){if(w.steerable)w.pivot.rotation.y=car.steer;w.mesh.rotation.x-=car.speed*dt*1.8}
-      car.root.updateMatrixWorld();
-      carSeatW.copy(car.seats[myCarSeat]).applyMatrix4(car.root.matrixWorld);
-      P.x=carSeatW.x;P.y=carSeatW.y;P.z=carSeatW.z;P.v.set(0,0,0);
-      if(jump)leaveCar();
-      cam.position.set(P.x,P.y+.75,P.z);
-      cam.rotation.set(pt,ya,0);
-      cam.getWorldDirection(fw);rt.set(Math.cos(ya),0,-Math.sin(ya));
-      me.root.visible=true;me.hd.visible=true;
-      me.root.position.set(P.x,P.y-1.15,P.z);
-      me.root.rotation.y=car.heading;
-      pose(me,U.uT.value,0,0,4,false,0,false);
-      net(dt,U.uT.value,0,4);
-      if(fr%30===0)hud();
-    }
-  }
-  else if(inBoat){const driver=(mySeat===0||boat.occupants[0]===null);const fwd=driver?iy:0,turn=driver?-ix:0;const maxSpeed=18;
+  if(inBoat){const driver=(mySeat===0||boat.occupants[0]===null);const fwd=driver?iy:0,turn=driver?-ix:0;const maxSpeed=18;
     if(!driver)boatFollow(dt);if(driver){boat.speed+=(fwd*maxSpeed-boat.speed)*Math.min(1,dt*1.2);
     boat.heading+=turn*dt*1.8*Math.max(.3,Math.abs(boat.speed)/maxSpeed);
     const bx0=boat.root.position.x,bz0=boat.root.position.z;
