@@ -800,7 +800,7 @@ function portalTick(dt){
 let NIGHT_EVT={phase:'idle',t:0,nightK:0,beam:null,bx:0,by:0,bz:0,koFired:false,moonFired:false};
 let nightRitT=0;
 function tryNightRitual(dt){
-  if(NIGHT_EVT.phase!=='idle')return;
+  if(NIGHT_EVT.phase!=='idle'&&NIGHT_EVT.phase!=='night')return;
   nightRitT-=dt;if(nightRitT>0)return;nightRitT=.35;
   const bs=[],ds=[];
   for(const r of rocks){
@@ -825,20 +825,21 @@ function tryNightRitual(dt){
   }
 }
 function startNightRitual(cx,cy,cz,b1,b2,d){
-  NIGHT_EVT.phase='beam';NIGHT_EVT.t=0;NIGHT_EVT.nightK=0;
+  const isMoon=NIGHT_EVT.phase==='night';
+  NIGHT_EVT.phase=isMoon?'moonbeam':'beam';NIGHT_EVT.t=0;NIGHT_EVT.nightK=isMoon?1:0;
   NIGHT_EVT.koFired=false;NIGHT_EVT.moonFired=false;
   NIGHT_EVT.bx=cx;NIGHT_EVT.by=cy;NIGHT_EVT.bz=cz;
   place(b1);place(b2);place(d);
   const geo=new T.CylinderGeometry(.35,.85,1,12,1,true).translate(0,.5,0);
   const mat=new T.MeshBasicMaterial({color:0xfff2b0,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,fog:false});
   const beam=new T.Mesh(geo,mat);
-  beam.quaternion.setFromUnitVectors(new V3(0,1,0),SUN);
+  beam.quaternion.setFromUnitVectors(new V3(0,1,0),isMoon?MOON:SUN);
   beam.position.set(cx,cy,cz);
   beam.scale.set(1,.001,1);
   beam.renderOrder=3;
   scene.add(beam);
   NIGHT_EVT.beam=beam;
-  sfx('launch');addMsg('\u2726','the offering hums toward the sun',.1);
+  sfx('launch');addMsg('\u2726',isMoon?'the offering hums toward the moon':'the offering hums toward the sun',.1);
   shake(.35);
 }
 function clearNight(){
@@ -869,6 +870,22 @@ function nightTick(dt){
     NIGHT_EVT.beam.material.opacity=op*.9;
     const s=1+Math.sin(t*6)*.03;
     NIGHT_EVT.beam.scale.x=s;NIGHT_EVT.beam.scale.z=s;
+  }
+  if(NIGHT_EVT.phase==='moonbeam'){
+    const nk=Math.max(0,Math.min(1,1-(t-2.5)/3));
+    NIGHT_EVT.nightK=nk;
+    U.uNight.value=nk;
+    sun.color.setRGB(1-.65*nk,1-.6*nk,1-.35*nk);
+    hemi.intensity=.85*(1-skyBlack)*(1-nk*.78);
+    if(t>=3&&!NIGHT_EVT.koFired){NIGHT_EVT.koFired=true;sfx('ko');shake(1);addMsg('\u2726','the moon fades',.05);}
+    if(t>=5.6&&!NIGHT_EVT.moonFired){
+      NIGHT_EVT.moonFired=true;
+      if(NIGHT_EVT.beam){scene.remove(NIGHT_EVT.beam);try{NIGHT_EVT.beam.geometry.dispose();NIGHT_EVT.beam.material.dispose()}catch(e){}NIGHT_EVT.beam=null}
+      NIGHT_EVT.phase='idle';NIGHT_EVT.nightK=0;U.uNight.value=0;
+      sun.color.setHex(0xfff0d8);hemi.intensity=.85*(1-skyBlack);
+      sfx('disc');addMsg('\u2726','the sun rises',.6);
+    }
+    return;
   }
   const nk=Math.max(0,Math.min(1,(t-2.5)/3));
   NIGHT_EVT.nightK=nk;
