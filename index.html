@@ -999,6 +999,61 @@ float mm=smoothstep(.5,.78,n1+vU*.3+n2*.15)*smoothstep(-.3,.9,vU+n3*.3);
 diffuseColor.rgb=mix(diffuseColor.rgb*(.8+.3*n2+.15*n3),moss,mm*.8);
 vec2 gb=vec2((n3-.5)*.5,(n2-.5)*.5);float nr=.35;`}),gvM=new T.MeshBasicMaterial({vertexColors:true,fog:false}),
 halo=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'#fff');g.addColorStop(.25,'#fff6');g.addColorStop(1,'#fff0');x.fillStyle=g;x.fillRect(0,0,64,64);return new T.CanvasTexture(c)})();
+// SUPERNOVA: a star ~400LY away goes supernova. Compressed timeline for gameplay.
+const SNOVA_DIR=(()=>{const a=2.34,e=.62;return new V3(Math.cos(a)*Math.cos(e),Math.sin(e),Math.sin(a)*Math.cos(e)).normalize()})();
+let SNOVA={state:'dormant',t:0,star:null,glow:null};
+(function(){
+  const st=new T.Sprite(new T.SpriteMaterial({map:halo,color:0xbcd6ff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.6}));
+  st.scale.set(2.2,2.2,1);st.renderOrder=4;st.visible=false;scene.add(st);SNOVA.star=st;
+  const gl=new T.Sprite(new T.SpriteMaterial({map:halo,color:0xddeeff,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:0}));
+  gl.scale.set(0,0,1);gl.renderOrder=5;gl.visible=false;scene.add(gl);SNOVA.glow=gl;
+})();
+const SNOVA_WAIT=70,SNOVA_BRIGHT=8,SNOVA_FLASH=5,SNOVA_AFTER=30;
+function supernovaTick(dt){
+  if(SNOVA.state==='dormant'){
+    if(!inGame||U.uNight.value<.5)return;
+    SNOVA.t+=dt;
+    if(SNOVA.t>=SNOVA_WAIT){
+      SNOVA.state='neutrino';SNOVA.t=0;
+      addMsg('\u2726','neutrino detectors have gone off',.5);sfx('whoosh');shake(.15);
+    }
+    return;
+  }
+  SNOVA.t+=dt;const t=SNOVA.t;
+  if(SNOVA.state==='neutrino'){
+    if(t>=3){SNOVA.state='brightening';SNOVA.t=0;addMsg('\u2726','a new light appears in the sky, 400 light years away',.6);sfx('launch');shake(.35)}
+    return;
+  }
+  let op=0,sc=0,r=1,g2=1,b2=1;
+  if(SNOVA.state==='brightening'){
+    const u=Math.min(1,t/SNOVA_BRIGHT);
+    op=Math.pow(u,2.4);sc=1+u*8;
+    r=.75+u*.25;g2=.82+u*.18;b2=1;
+    if(t>=SNOVA_BRIGHT){SNOVA.state='flash';SNOVA.t=0;sfx('ko');shake(1);addMsg('\u2726','the star tears itself apart',.05)}
+  } else if(SNOVA.state==='flash'){
+    const u=Math.min(1,t/SNOVA_FLASH);const pulse=Math.sin(u*Math.PI);
+    op=1;sc=9+pulse*20;
+    r=1.4;g2=1.45;b2=1.6;
+    hemi.intensity=.85*(1-skyBlack)+1.0*pulse;
+    sun.intensity+=1.2*pulse;
+    if(t>=SNOVA_FLASH){SNOVA.state='afterglow';SNOVA.t=0;addMsg('\u2726','the light begins to fade',.4)}
+  } else if(SNOVA.state==='afterglow'){
+    const u=Math.min(1,t/SNOVA_AFTER);
+    op=1-u*.82;sc=29-u*20;
+    r=1.4-(1-u)*.5;g2=1.45-(1-u)*.6;b2=1.6-(1-u)*.4;
+    if(t>=SNOVA_AFTER){SNOVA.state='remnant';SNOVA.t=0;addMsg('\u2726','a nebula blooms where the star was',.55)}
+  } else {
+    op=.16+Math.sin(U.uT.value*.3)*.03;
+    sc=9+Math.sin(U.uT.value*.2)*.8;
+    r=.95;g2=.7;b2=1.15;
+  }
+  const G=SNOVA.glow;
+  G.visible=true;
+  G.material.opacity=Math.max(0,Math.min(1,op));
+  G.scale.set(sc,sc,1);
+  G.material.color.setRGB(r,g2,b2);
+  if(SNOVA.star)SNOVA.star.visible=false;
+}
 const AD=['Quiet','Amber','Hollow','Drifting','Silver','Wandering','Moss','Ember','Velvet','Pale','Lantern','Starlit'],
 NMS=[['Grotto','Cavern','Burrow','Hollow'],['Henge','Circle','Ring'],['Tower','Spire','Watch'],['Monolith','Obelisk','Stone'],['Moon Gate','Arch','Portal']],
 QS=[['What sound do you miss the most?','Whisper something into the dark. What would you say?','Describe the coziest place you remember.'],
@@ -1439,6 +1494,11 @@ function startGame(serverName,seed,worldOpts,hostMode){
   inGame=true;initAudio();startMusic();runToggle=false;
   if(worldOpts)applyWorldOpts(worldOpts);
   regen(seed||randSeed());
+  NIGHT_EVT.phase='night';NIGHT_EVT.nightK=1;NIGHT_EVT.t=999;NIGHT_EVT.koFired=true;NIGHT_EVT.moonFired=true;
+  U.uNight.value=1;sun.color.setRGB(.35,.4,.65);hemi.intensity=.85*(1-.78);
+  SNOVA.state='dormant';SNOVA.t=0;
+  if(SNOVA.star)SNOVA.star.visible=false;
+  if(SNOVA.glow){SNOVA.glow.material.opacity=0;SNOVA.glow.visible=false;SNOVA.glow.scale.set(0,0,1)}
   $('gb').style.display='block';$('jb').style.display='block';$('st').style.display='block';$('eb').style.display='flex';$('hint').style.display='block';$('rb').style.display='block';
   $('helpbtn').style.display='flex';
   syncRunBtn();
@@ -1682,6 +1742,8 @@ if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompo
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
 skyM.position.copy(cam.position);water.position.set(P.x,0,P.z);
+if(SNOVA.star){SNOVA.star.position.copy(cam.position).addScaledVector(SNOVA_DIR,240);SNOVA.star.visible=U.uNight.value>.5&&SNOVA.state==='dormant'}
+if(SNOVA.glow)SNOVA.glow.position.copy(cam.position).addScaledVector(SNOVA_DIR,239);
 sun.target.position.set(Math.round(P.x/2)*2,0,Math.round(P.z/2)*2);sun.position.copy(sun.target.position).addScaledVector(SUN,90);
 chunks(false);if(fr%4===0)rd.shadowMap.needsUpdate=true;
 for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
@@ -1744,7 +1806,7 @@ birds.instanceMatrix.needsUpdate=true;
 for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t*.8+i)*.5;mp[j+1]=P.y+.3+((i*.137+t*.04)%1)*8;mp[j+2]=P.z+Math.cos(i*7.7+t*.06)*15+Math.cos(t*.9+i)*.5}mg.attributes.position.needsUpdate=true;motes.visible=!uw;
 {const ic=inCave(),nk=NIGHT_EVT.nightK;sun.intensity+=((((ic?.35:1.1))*(1-skyBlack)*(1-nk*.85))-sun.intensity)*Math.min(1,dt*3)}
 poiTick(dt,t);if(fr%6===0)mixAudio(uw);
-tryNightRitual(dt);nightTick(dt);
+tryNightRitual(dt);nightTick(dt);supernovaTick(dt);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
 $('ebt').style.display=(held&&held.u.kind===6&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
