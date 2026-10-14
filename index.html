@@ -691,7 +691,6 @@ function leaveBoat(){if(!inBoat)return;
   for(let d=2.6;d<=9&&!fd;d+=1.2)for(const s of[1,-1,0]){const x=bx+(s?rx*s*d:-Math.sin(boat.heading)*d),z=bz+(s?rz*s*d:-Math.cos(boat.heading)*d),h=H(x,z);if(h>-.2&&h<5&&!inPit(x,z)){ex=x;ez=z;fd=1;break}}
   P.x=ex;P.z=ez;const gg=H(P.x,P.z);P.y=Math.max(gg,0.05);P.v.set(0,fd?3:4,0);
   const lb=document.getElementById('lb');if(lb)lb.style.display='none'}
-// ==== /CARS ====
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
 const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1,eatChomped=0;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
 // SKIP: place() now also resets skip counter when a rock is (re)spawned
