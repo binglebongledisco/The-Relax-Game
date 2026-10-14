@@ -31,9 +31,17 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 #ttl{font-size:min(14vh,8.5vw);line-height:.9;color:#fff;font:800 clamp(32px,9vmin,60px)/1 system-ui,sans-serif;letter-spacing:-.02em;margin:0}
 #mp{color:#cfe3e0;font:400 clamp(12px,2.2vmin,14px)/1.5 system-ui,sans-serif;max-width:34ch;background:none;border:0;padding:0;margin:0}
 #home input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--b);background:#ffffff12;color:var(--t);font:16px system-ui}
-#play,#skb,#sdn,#mpbtn,#hostbtn,#joinbtn,#mpback{width:100%;text-align:center;padding:13px;border-radius:12px;font:800 17px system-ui;cursor:pointer;box-shadow:none;-webkit-tap-highlight-color:transparent}
+#play,#skb,#sdn,#mpbtn,#pubbtn,#hostbtn,#joinbtn,#mpback{width:100%;text-align:center;padding:13px;border-radius:12px;font:800 17px system-ui;cursor:pointer;box-shadow:none;-webkit-tap-highlight-color:transparent}
 #play,#sdn,#hostbtn,#joinbtn{background:var(--a);color:var(--k);border:0}
 #skb,#mpbtn,#mpback{background:#ffffff12;border:1px solid var(--b);font-weight:600;font-size:15px}
+#pubbtn{background:linear-gradient(135deg,#3ad9a0,#1f8fb0);color:#062c26;border:0}
+#asbox{margin-top:4px;padding:10px 12px;border-radius:12px;background:#0b1626cc;border:1px solid var(--b);font-family:system-ui,sans-serif}
+.as-h{color:#9fc0bb;font:700 11px system-ui;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.asr{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;background:#ffffff08;margin-top:4px;color:#dfeae8;font:600 13px system-ui;transition:background .15s}
+.asr:hover{background:#ffffff14}
+.asr.online{background:#0d2a1e88;border:1px solid #3ad9a055}
+.asr .as-count{color:#7a8c95;font-size:11px;font-weight:600}
+.asr.online .as-count{color:#3ad9a0}
 #sk{display:none;position:fixed;inset:0;z-index:8;background:#06161df5;overflow:auto;padding:max(12px,env(safe-area-inset-top)) 12px 12px}
 #sv{flex:0 0 150px;height:224px}#so{flex:1 1 280px;display:flex;flex-direction:column;gap:12px;font:600 13px system-ui}#sdn{flex:1 1 100%;max-width:320px}
 .rw{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.rw>span{width:62px;color:#9fc0bb}
@@ -166,8 +174,13 @@ body.ig::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:2;b
     <div class="hr">
       <input id="un" placeholder="Your name (optional)" maxlength="16" autocomplete="off">
       <div id="skb">Customize character</div>
+      <div id="pubbtn">Join Public Room</div>
       <div id="mpbtn">Multiplayer</div>
       <div id="play">Play Solo</div>
+      <div id="asbox">
+        <div class="as-h">Active servers</div>
+        <div id="aslist"><div class="asr">checking…</div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -212,6 +225,10 @@ body.ig::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:2;b
     <div class="mpbtnrow">
       <div id="hostbtn">Host</div>
       <div id="joinbtn" style="display:none">Join</div>
+    </div>
+    <div id="mpasbox" style="display:flex;flex-direction:column;padding:12px;border-radius:14px;background:#0b2530ee;border:1px solid var(--b)">
+      <div class="as-h">Active servers</div>
+      <div id="mpaslist"></div>
     </div>
     <div id="mpback">Back</div>
   </div>
@@ -1772,8 +1789,44 @@ requestAnimationFrame(loop);
   const status=$('mpstatus'),backBtn=$('mpback');
   const nameField=$('mpnamefield'),nameFieldJoin=$('mpnamewrap');
   let mode='join';
+  const PUBLIC_ROOMS=[
+    {id:'bloxlicka-public-room',label:'Public Room'},
+    {id:'bloxlicka-hangout',label:'Hangout'},
+    {id:'bloxlicka-build',label:'Builders'}
+  ];
+  function renderPublicList(containerId){
+    const wrap=document.getElementById(containerId);
+    if(!wrap)return;
+    wrap.innerHTML='';
+    if(!window.probeRoom){
+      const d=document.createElement('div');d.className='asr';d.textContent='networking not ready';wrap.appendChild(d);
+      return;
+    }
+    for(const r of PUBLIC_ROOMS){
+      const row=document.createElement('div');row.className='asr';
+      const lbl=document.createElement('span');lbl.textContent=r.label;row.appendChild(lbl);
+      const cnt=document.createElement('span');cnt.className='as-count';cnt.textContent='…';row.appendChild(cnt);
+      wrap.appendChild(row);
+      window.probeRoom(r.id).then(info=>{
+        if(info.online){row.classList.add('online');cnt.textContent=(info.count||1)+' online';row.onclick=()=>startGame(r.id,null,null,false)}
+        else{cnt.textContent='create';row.onclick=()=>startGame(r.id,randSeed(),null,true)}
+      }).catch(()=>{cnt.textContent='?'});
+    }
+  }
+  window.__renderPublicList=renderPublicList;
+  const pubBtn=document.getElementById('pubbtn');
+  if(pubBtn)pubBtn.onclick=()=>{
+    const r=PUBLIC_ROOMS[0];
+    if(!window.probeRoom){startGame(r.id,randSeed(),null,true);return}
+    window.probeRoom(r.id).then(info=>{
+      if(info.online)startGame(r.id,null,null,false);
+      else startGame(r.id,randSeed(),null,true);
+    }).catch(()=>startGame(r.id,randSeed(),null,true));
+  };
+  setTimeout(()=>renderPublicList('aslist'),600);
   $('mpbtn').onclick=()=>{home.style.display='none';panel.style.display='block';status.textContent='';
-    if(!$('hostseed').value)$('hostseed').value=randSeed();setMode('join')};
+    if(!$('hostseed').value)$('hostseed').value=randSeed();setMode('join');
+    if(window.__renderPublicList)window.__renderPublicList('mpaslist')};
   backBtn.onclick=()=>{panel.style.display='none';home.style.display='flex'};
   function setMode(m){mode=m;
     tabHost.classList.toggle('on',m==='host');tabJoin.classList.toggle('on',m==='join');
@@ -1951,6 +2004,25 @@ requestAnimationFrame(loop);
       if(!isSettled()){fail(isJoin&&t==='peer-unavailable'?new Error('host-not-found'):err);return}
       if(['network','server-error','socket-error','socket-closed'].includes(t)&&room.state==='online'){room.state='failed';if(typeof returnHome==='function')returnHome('Connection lost','Your device lost its network connection. Reconnect and try again.','warn')}});
     peer.on('disconnected',()=>{if(room.state!=='online')return;room.state='reconnecting';if(typeof hud==='function')hud('reconnecting…');try{peer.reconnect()}catch(e){}})};
+  window.probeRoom=function(serverName){
+    return new Promise(resolve=>{
+      if(typeof Peer==='undefined'){resolve({online:false,count:0});return}
+      const hostId=hostIdFor(serverName);
+      let peer,settled=false;
+      try{peer=new Peer(null,{debug:0,config:RTC})}catch(e){resolve({online:false,count:0});return}
+      const done=(online,count)=>{if(settled)return;settled=true;
+        try{peer.destroy()}catch(e){}
+        resolve({online:!!online,count:count||0})};
+      const to=setTimeout(()=>done(false,0),3000);
+      peer.on('open',()=>{
+        let conn;
+        try{conn=peer.connect(hostId,{label:'ctl',reliable:true,serialization:'json'})}catch(e){clearTimeout(to);done(false,0);return}
+        conn.on('data',m=>{if(m&&m.t==='welcome'){clearTimeout(to);done(true,(m.d&&m.d.count)||1)}});
+        conn.on('close',()=>{clearTimeout(to);done(false,0)});
+        conn.on('error',()=>{clearTimeout(to);done(false,0)})});
+      peer.on('error',()=>{clearTimeout(to);done(false,0)});
+    });
+  };
   window.startRoom=function(serverName,isHost,opts){
     return new Promise((resolve,reject)=>{
       if(typeof Peer==='undefined'){reject(new Error('PeerJS not loaded'));return}
