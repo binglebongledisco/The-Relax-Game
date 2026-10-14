@@ -548,13 +548,13 @@ parts.push([new T.CylinderGeometry(.04,.1,1.8,5).translate(0,.9,0),new M4().make
 cl(1.55*Math.cos(a),y+1,-1.55*Math.sin(a),1+hs(k,5)*.35,hs(k,3))}
 cl(0,5.4,0,1.45,.7);cl(.2,4.1,-.2,1.5,.2);return mergeParts(parts)})();
 const lighthouseG=(()=>{const P=[],W=[.94,.94,.92],R=[.78,.2,.16],roof=[.2,.22,.28],glass=[1,.86,.42],rock=[.42,.4,.36],sand=[.72,.66,.48],dark=[.06,.08,.12],iron=[.16,.16,.19],
-cl=(r0,r1,h,sg,y,c,j,f,hg,open)=>P.push([new T.CylinderGeometry(r0,r1,h,sg,hg||1,!!open).translate(0,y,0),new M4(),c,j||0,f||(()=>1)]),
+cl=(r0,r1,h,sg,y,c,j,f,hg,open,ts,tl)=>P.push([new T.CylinderGeometry(r0,r1,h,sg,hg||1,!!open,ts||0,tl||Math.PI*2).translate(0,y,0),new M4(),c,j||0,f||(()=>1)]),
 bx=(w,h,d,x,y,z,c,ry)=>P.push([new T.BoxGeometry(w,h,d),mt(x,y,z).multiply(new M4().makeRotationY(ry||0)),c,0,()=>1]),
 tr=(r,t,y,c)=>P.push([new T.TorusGeometry(r,t,6,32).rotateX(Math.PI/2),mt(0,y,0),c,0,()=>1]),rad=y=>4.5-(y-6.6)/30*2.3,sn=Math.sin,cs=Math.cos;
 cl(4,18,4,40,2,sand,.3,(x,y,z)=>.72+.28*hs(x*4.7,z*4.7));cl(4,4,.4,24,4.2,sand,.1);
 for(let k=0;k<14;k++){const a=k*.449+hs(k,1)*.3,d=5.2+hs(k,2)*5,q=.6+hs(k,3)*1.1;P.push([new T.IcosahedronGeometry(1,1),mt(cs(a)*d,islandTopAt(d)+q*.15,sn(a)*d).multiply(new M4().makeScale(q*1.3,q*.8,q)),rock,.45,(x,y,z)=>.6+.4*hs(x*5,z*5)])}
 cl(5,5.8,1,24,4.9,rock,.05,(x,y,z)=>.7+.3*hs(x*5,z*5));cl(4.5,5,1.2,24,6,W,.04);
-for(let k=0;k<6;k++){const y0=6.6+k*5;cl(rad(y0+5),rad(y0),5,26,y0+2.5,k%2?R:W,.03,(x,y,z)=>.9+.1*hs(x*9,y*9),2,true)}
+for(let k=0;k<6;k++){const y0=6.6+k*5,ts=k?0:Math.PI/2+0.32,tl=k?Math.PI*2:Math.PI*2-0.64;cl(rad(y0+5),rad(y0),5,26,y0+2.5,k%2?R:W,.03,(x,y,z)=>.9+.1*hs(x*9,y*9),2,true,ts,tl)}
 P.push([new T.CircleGeometry(4.32,24).rotateX(-Math.PI/2),mt(0,6.72,0),[.42,.34,.26],.05,()=>1]);
 for(let y=8;y<36;y+=2){const rr=rad(y)-.4,ang=Math.PI*.6;P.push([new T.BoxGeometry(1.1,.09,.14),mt(Math.cos(ang)*rr,y,Math.sin(ang)*rr).multiply(new M4().makeRotationY(-ang)),[.55,.4,.24],0,()=>1])}
 for(let k=1;k<6;k++)tr(rad(6.6+k*5)+.06,.1,6.6+k*5,iron);
@@ -576,16 +576,19 @@ function mkLhStairs(s){const P=[],N=s.N,dr=(s.r0-s.r1)/N,hw=s.hw,th=.18,wood=[.5
  for(let i=0;i<=N;i+=2){const uC=s.r0-dr*i,yT=s.y0+(s.y1-s.y0)*(i/N);
   for(const sd of[-1,1])P.push([new T.CylinderGeometry(.04,.04,1.05,6).translate(0,.525,0),mt(s.ux*uC+s.px*hw*sd,yT,s.uz*uC+s.pz*hw*sd),iron,0,()=>1]);}
  return mergeParts(P)}
-function lhGroundY(x,z){let g=H(x,z);if(DIMON)return g;
- for(const L of lhPool){const s=L.userData.stair;if(!s)continue;
+function lhGroundY(x,z,y){let g=H(x,z);if(DIMON)return g;
+ for(const L of lhPool){const s=L.userData.stair,sp=L.userData.spiral;if(!s&&!sp)continue;
   const dx=x-L.position.x,dz=z-L.position.z,d2=dx*dx+dz*dz;
-  if(d2<s.platR*s.platR&&s.platY>g)g=s.platY;
-  const u=dx*s.ux+dz*s.uz;if(u<s.r1-.15||u>s.r0+.15)continue;
-  const v=dx*s.px+dz*s.pz;if(Math.abs(v)>s.hw)continue;
-  const t=Math.max(0,Math.min(1,(s.r0-u)/(s.r0-s.r1))),y=s.y0+t*(s.y1-s.y0);
-  if(y>g)g=y;}
+  if(s){if(d2<s.platR*s.platR&&s.platY>g)g=s.platY;
+   const u=dx*s.ux+dz*s.uz;
+   if(u>s.r1-.15&&u<s.r0+.15){const v=dx*s.px+dz*s.pz;
+    if(Math.abs(v)<=s.hw){const t=Math.max(0,Math.min(1,(s.r0-u)/(s.r0-s.r1))),yy=s.y0+t*(s.y1-s.y0);if(yy>g)g=yy;}}}
+  if(sp&&d2<30){let bY=-1e9,bD=1e9;
+   for(let i=0;i<sp.length;i++){const st=sp[i],dy=st.y-y;if(dy<-1.2||dy>1.2)continue;
+    const ax=dx-st.x,az=dz-st.z,dd=ax*ax+az*az;if(dd<st.r*st.r&&dd<bD){bD=dd;bY=st.y}}
+   if(bY>g)g=bY;}}
  return g}
-function lhGroundSnap(x,z,y){const gh=H(x,z),gr=lhGroundY(x,z);return(gr>gh+0.05&&y<gr-0.6)?gh:gr}
+function lhGroundSnap(x,z,y){const gh=H(x,z),gr=lhGroundY(x,z,y);return(gr>gh+0.05&&y<gr-0.6)?gh:gr}
 const PAD_CELL=64;
 function _padPOI(px,pz,rad){const ix=Math.floor(px/CL),iz=Math.floor(pz/CL);const r2=rad*rad;
   for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){const c=cave((ix+dx+.5)*CL,(iz+dz+.5)*CL);if(!c)continue;
@@ -654,13 +657,27 @@ function trySpawnLighthouse(ox,oz){const gx=Math.floor(ox/LH_CELL),gz=Math.floor
   g.add(doorHinge);g.userData.doorHinge=doorHinge;
   scene.add(g);lhPool.push(g);g.userData.gk=gk;g.userData.colKey='lh_'+gk;
   const _lhY=H(cx,cz);
-  const _DA=Math.atan2(0.75,4.15);
+  const _DA=0;
   for(let k=0;k<12;k++){const a=k*Math.PI/6;let da=a-_DA;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;if(Math.abs(da)<0.4)continue;addCollider(cx+Math.cos(a)*4.4,cz+Math.sin(a)*4.4,1.3,_lhY,g.userData.colKey,46)}
   {const ux=Math.cos(_DA),uz=Math.sin(_DA),r0=15,r1=4.0,hw=1.0,N=14;
    const y0=Math.max(1.0,Math.min(4.0,H(cx+ux*r0,cz+uz*r0))),y1=6.72;
    const s={ux,uz,px:-uz,pz:ux,r0,r1,y0,y1,hw,N,platR:4.5,platY:6.72};
    g.userData.stair=s;
    const st=new T.Mesh(mkLhStairs(s),lighthouseM);st.castShadow=true;g.add(st);}
+  {const rT=rad(36.72)-0.28,rB=rad(6.72)-0.28,hI=36.72-6.72;
+   const iw=new T.Mesh(new T.CylinderGeometry(rT,rB,hI,24,1,true,Math.PI/2+0.32,Math.PI*2-0.64),
+     new T.MeshLambertMaterial({color:0x4a3a2a,side:T.BackSide}));
+   iw.position.y=6.72+hI/2;g.add(iw);}
+  {const SPR=60,y0i=6.9,y1i=36.72,stepH=(y1i-y0i)/SPR,turns=2.5;
+   const wood=[.5,.36,.22],spiralParts=[],steps=[];
+   for(let i=0;i<SPR;i++){const t=i/(SPR-1);
+    const ang=t*turns*Math.PI*2;
+    const rAt=rad(y0i+t*(y1i-y0i)),rSt=rAt-1.0;
+    const x=Math.cos(ang)*rSt,z=Math.sin(ang)*rSt,y=y0i+(i+1)*stepH;
+    steps.push({x,z,y,r:0.9});
+    spiralParts.push([new T.CylinderGeometry(0.9,0.9,0.16,12).translate(0,-0.08,0),mt(x,y,z),wood,0,()=>1]);}
+   g.userData.spiral=steps;
+   const sm=new T.Mesh(mergeParts(spiralParts),lighthouseM);sm.castShadow=true;g.add(sm);}
   if(lhPool.length>LH_MAX){let far=-1,fi=-1;for(let i=0;i<lhPool.length;i++){const L=lhPool[i];const d2=(L.position.x-P.x)*(L.position.x-P.x)+(L.position.z-P.z)*(L.position.z-P.z);if(d2>far){far=d2;fi=i}}if(fi>=0){const L=lhPool[fi];if(L.userData.colKey)clearCollidersByKey(L.userData.colKey);scene.remove(L);lhPool.splice(fi,1)}}}
 const slope=(x,z,h)=>Math.hypot(H(x+1,z)-h,H(x,z+1)-h);
 function fill(c,cx,cz){
@@ -1564,7 +1581,7 @@ else{
     }
   }
   const spd=Math.min(1.55,Math.hypot(P.v.x,P.v.z)/5.2);
-  const air=!swim&&P.y>lhGroundY(P.x,P.z)+.35;
+  const air=!swim&&P.y>lhGroundY(P.x,P.z,P.y)+.35;
   {const inW=g<-.05&&P.y<.45;if(inW&&spd>.12&&(wkT-=dt)<0){wkT=swim?.28:.4;ripple(P.x,P.z,Math.min(1.2,spd*(swim?.9:.6))+.15)}if(inW&&!wasW&&P.v.y<-1.5){ripple(P.x,P.z,1.6);shake(.1)}wasW=inW}
   if(!swim && !air && !dragging && spd>0.05){bobT+=dt*(3.2+spd*9.5*(running?1.2:1));const bobAmp=spd*0.055*(running?1.3:1);const sideAmp=spd*0.030;bobY=Math.sin(bobT*2)*bobAmp;bobX=Math.sin(bobT)*sideAmp;bobRoll=Math.sin(bobT)*spd*0.020}
   else{bobT+=dt*1.2;const sp2=Math.max(0,spd);bobY=Math.sin(bobT*2)*sp2*0.03*Math.max(0,1-Math.abs(P.v.y)*0.5);bobX*=Math.max(0,1-dt*6);bobRoll*=Math.max(0,1-dt*6)}
