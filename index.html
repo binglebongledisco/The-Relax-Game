@@ -395,7 +395,8 @@ cam.rotation.order='YXZ';scene.add(cam);
 scene.fog=new T.FogExp2(0xb9cfe6,.014);const fogC=scene.fog.color,FOG0=fogC.clone();
 function rs(){rd.setPixelRatio(pr);rd.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
 addEventListener('resize',rs);rs();
-function applyPerf(){try{PERF=localStorage.getItem('rlx-perf')==='1'}catch(e){}
+function initPerf(){try{PERF=localStorage.getItem('rlx-perf')==='1'}catch(e){}applyPerf()}
+function applyPerf(){
  const btn=$('perfbtn');if(btn){btn.textContent='\u26a1 Performance Mode: '+(PERF?'ON':'OFF');btn.classList.toggle('on',PERF)}
  pr=PERF?1:pm;rd.setPixelRatio(pr);rd.setSize(innerWidth,innerHeight,false);
  rd.shadowMap.enabled=!PERF;if(!PERF)rd.shadowMap.needsUpdate=true;}
@@ -1304,7 +1305,7 @@ function _joining(serverName){
   }).catch(e=>{if(tok!==netTok||!inGame)return;returnHome('Could not join',netErrMsg(e,rn),'warn')});
 }
 $('play').onclick=()=>{startGame('',randSeed(),null,false)};
-$('perfbtn').onclick=()=>{PERF=!PERF;applyPerf();};
+$('perfbtn').onclick=()=>{PERF=!PERF;try{localStorage.setItem('rlx-perf',PERF?'1':'0')}catch(e){}applyPerf();};
 function syncBar(){const items=$('eb').children;for(const el of items){const v=el.dataset.e;if(!isNaN(+v))el.classList.toggle('on',emote===+v)}}
 $('eb').onclick=ev=>{const e=ev.target.closest('i[data-e]');if(!e)return;const v=e.dataset.e;
   if(v==='chat')toggleChat();
@@ -1601,7 +1602,7 @@ function trySpawnPad(ox,oz){if(!padReady)return;const gx=Math.floor(ox/PAD_CELL)
   padPool.push(g);
   if(padPool.length>PAD_MAX){let far=-1,fi=-1;for(let i=0;i<padPool.length;i++){const p=padPool[i];const d2=(p.userData.cx-P.x)*(p.userData.cx-P.x)+(p.userData.cz-P.z)*(p.userData.cz-P.z);if(d2>far){far=d2;fi=i}}if(fi>=0){scene.remove(padPool[fi]);padPool.splice(fi,1)}}}
 spawnAllPads();
-applyPerf();
+initPerf();
 
 requestAnimationFrame(loop);
 </script>
