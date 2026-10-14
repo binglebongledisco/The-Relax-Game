@@ -327,7 +327,7 @@ function sanitizeServerName(s){if(typeof s!=='string')return'';return s.toLowerC
 function safeInt(v,min,max,def){const n=Number(v);if(!Number.isFinite(n))return def;return Math.max(min,Math.min(max,Math.round(n)))}
 function safeFloat(v,min,max,def){const n=Number(v);if(!Number.isFinite(n))return def;return Math.max(min,Math.min(max,n))}
 const MAX_MSG_BYTES=8192;
-const VALID_MSG_TYPES=new Set(['pres','chat','thr','hold','pull','dragging','release','hit','disc','oreHit','kick','playerList','welcome','world','peerLeave','bring','bringAll','respawn','boat','dim','dimc','inv']);
+const VALID_MSG_TYPES=new Set(['pres','chat','thr','hold','pull','dragging','release','hit','disc','oreHit','kick','playerList','welcome','world','peerLeave','bring','bringAll','respawn','boat','dim','dimc','inv','megamerge']);
 function validateMsg(m){if(!m||typeof m!=='object')return null;if(typeof m.t!=='string'||!VALID_MSG_TYPES.has(m.t))return null;if(m.d!==undefined&&typeof m.d==='object'&&m.d!==null){try{const s=JSON.stringify(m.d);if(s.length>MAX_MSG_BYTES)return null}catch(e){return null}}return m}
 function safeText(el,txt){el.textContent='';el.appendChild(document.createTextNode(String(txt).slice(0,400)))}
 
@@ -665,8 +665,9 @@ for(let i=0;i<48;i++)mkItem(i%6);for(let i=0;i<10;i++)mkItem(6);
 // BURGER MERGE: 4 resting small burgers close together become one mega burger
 let mergeT=0;
 function tryMergeBurgers(){
+  if(rm&&!rm.isHost)return;
   const bs=[];
-  for(const r of rocks)if(r.u.kind===6&&!r.u.big&&!r.u.held&&!r.u.remoteHeld&&r.u.rest)bs.push(r);
+  for(const r of rocks)if(r.u.kind===6&&!r.u.big&&!r.u.held&&!r.u.remoteHeld&&r.u.rest&&!r.u.stored)bs.push(r);
   if(bs.length<4)return;
   for(let i=0;i<bs.length;i++){
     const near=[];
@@ -684,7 +685,8 @@ function tryMergeBurgers(){
     big.position.set(cx,cy+.2,cz);
     big.u.big=true;big.u.r*=2.4;big.u.b*=1.5;big.u.rest=false;big.u.v.set(0,3.5,0);big.u.skip=0;big.u.padCd=0;
     big.scale.setScalar(2.4);
-    for(let k=1;k<cluster.length;k++){const c=cluster[k];place(c);c.u.rest=true;c.u.v.set(0,0,0)}
+    for(let k=1;k<cluster.length;k++){const c=cluster[k];c.u.stored=true;c.u.rest=false;c.visible=false;c.u.held=false;c.u.remoteHeld=null}
+    if(rm)rm.emit('megamerge',{a:big.u.idx,b:cluster[1].u.idx,c:cluster[2].u.idx,d:cluster[3].u.idx,x:+big.position.x.toFixed(2),y:+big.position.y.toFixed(2),z:+big.position.z.toFixed(2)});
     sfx('launch');ripple(cx,cz,1.6);shake(.28);
     const e=document.getElementById('bn');
     if(e){e.innerHTML='<small>merge</small>mega burger';e.classList.add('on');clearTimeout(bt);bt=setTimeout(()=>e.classList.remove('on'),4200)}
@@ -1510,7 +1512,7 @@ holdK+=((held?1:0)-holdK)*Math.min(1,dt*9);handR.position.y+=holdK*.06;handR.rot
 lhG.position.set(-.36-breathX-walkBob,-.27+Math.sin(idle*1.2+1)*.007+Math.cos(bobT*2+1)*.018*spdMag*(1+runK*.5)+(1-lhVis*lhVis*(3-2*lhVis))*-.55+runK*.08,-.55+runK*.02-sw);
 lhG.rotation.set(-.25+Math.sin(idle*1.2+1)*.02-runK*.12+sw*2.2,-.1-Math.cos(idle*.8)*.015,-.15+walkBob*.8);
 dragK+=((dragging?1:0)-dragK)*Math.min(1,dt*8);{const tg=Math.sin(idle*5)*.03*dragK;handR.position.x-=dragK*.12;handR.position.z+=tg;handR.position.y+=dragK*.05;handR.rotation.y-=dragK*.15;lhG.position.x+=dragK*.12;lhG.position.z-=tg;lhG.position.y+=dragK*.05;lhG.rotation.y+=dragK*.15}
-if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.held=false;held.u.rest=true;held.u.v.set(0,0,0);held.position.set(P.x+9000,700,P.z+9000);held=null;$('gb').textContent='Grab'}if(eatT>=EAT_DUR)eatT=-1}
+if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.stored=true;held.u.held=false;held.u.rest=false;held.visible=false;if(rm)rm.emit('inv',{i:held.u.idx,on:1});held=null;$('gb').textContent='Grab'}if(eatT>=EAT_DUR)eatT=-1}
 if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompose(_hp,_hq,new T.Vector3());
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
@@ -1730,9 +1732,9 @@ $('mpbtn').onclick=()=>{home.style.display='none';panel.style.display='block';st
   const fin=(v,a,b,d)=>{v=+v;return Number.isFinite(v)?Math.max(a,Math.min(b,v)):d};
   const vec=(a,lim)=>Array.isArray(a)&&a.length===3?a.map(x=>fin(x,-lim,lim,0)):null;
   const sid=s=>typeof s==='string'?s.slice(0,64):'';
-  const HOST_ONLY=new Set(['kick','playerList','welcome','world','bring','bringAll','respawn','peerLeave']);
+  const HOST_ONLY=new Set(['kick','playerList','welcome','world','bring','bringAll','respawn','peerLeave','megamerge']);
   const LIM={pres:40,dragging:40,chat:4,default:40};
-  const H2={pres:'presence',chat:'chat',disc:'disc',hold:'hold',thr:'thr',dragging:'dragging',release:'release',hit:'hit',oreHit:'oreHit',kick:'kick',playerList:'playerList',welcome:'welcome',world:'world',peerLeave:'peerLeaveMsg',bring:'bring',bringAll:'bringAll',respawn:'respawn',boat:'boat',rag:'rag',dim:'dim',dimc:'dimc',inv:'inv'};
+  const H2={pres:'presence',chat:'chat',disc:'disc',hold:'hold',thr:'thr',dragging:'dragging',release:'release',hit:'hit',oreHit:'oreHit',kick:'kick',playerList:'playerList',welcome:'welcome',world:'world',peerLeave:'peerLeaveMsg',bring:'bring',bringAll:'bringAll',respawn:'respawn',boat:'boat',rag:'rag',dim:'dim',dimc:'dimc',inv:'inv',megamerge:'megamerge'};
   function clean(t,d){
     d=(d&&typeof d==='object')?d:{};
     switch(t){
@@ -1745,6 +1747,7 @@ $('mpbtn').onclick=()=>{home.style.display='none';panel.style.display='block';st
       case 'dragging':{const p=vec(d.p,5000),to=sid(d.to);return p&&to?{to,p}:null}
       case 'release':{const to=sid(d.to);return to?{to}:{}}
       case 'hit':return{by:sid(d.by),to:d.to?sid(d.to):null,v:vec(d.v,60)};case 'dim':return{d:Math.round(fin(d.d,0,1,0)),x:fin(d.x,-5000,5000,0),z:fin(d.z,-5000,5000,0),a:fin(d.a,-7,7,0)};case 'inv':{const i=Math.round(fin(d.i,-1,1e6,-1));return(typeof rocks!=='undefined'&&rocks[i])?{i,on:!!d.on}:null}
+      case 'megamerge':{const A=Math.round(fin(d.a,-1,1e6,-1)),B=Math.round(fin(d.b,-1,1e6,-1)),C=Math.round(fin(d.c,-1,1e6,-1)),D=Math.round(fin(d.d,-1,1e6,-1));return(A>=0&&B>=0&&C>=0&&D>=0)?{a:A,b:B,c:C,d:D,x:fin(d.x,-5000,5000,0),y:fin(d.y,-300,600,0),z:fin(d.z,-5000,5000,0)}:null}
       case 'oreHit':case 'disc':return(typeof d.id==='number'||typeof d.id==='string')?{id:typeof d.id==='string'?d.id.slice(0,40):d.id}:null;
       case 'boat':case 'dimc':return{};
     }
@@ -1943,11 +1946,12 @@ window.startRoom=function(serverName,isHost,opts){
     R.on('respawn',(from)=>{if(R.isHost)return;if(!toHost(from,' respawned everyone'))spawn()});
     R.on('world',(from,msg)=>{if(R.isHost)return;if(syncWorld(msg))addMsg('·','World synced with host',.3)});
     R.on('welcome',(from,msg)=>{if(R.isHost)return;
-      syncWorld(msg);
-      if(msg.hx!==undefined){P.x=fin(msg.hx,-5000,5000,0);P.y=fin(msg.hy,-300,600,0)+1;P.z=fin(msg.hz,-5000,5000,0);P.v.set(0,0,0);addMsg('·','Spawned on the host',.3)}});
+      if(msg.hx!==undefined){P.x=fin(msg.hx,-5000,5000,0);P.y=fin(msg.hy,-300,600,0)+1;P.z=fin(msg.hz,-5000,5000,0);P.v.set(0,0,0);addMsg('·','Spawned on the host',.3)}
+      syncWorld(msg);});
     R.on('dim',(from,msg)=>openPortal(from,msg.d,msg.x,msg.z,msg.a,false));
     R.on('dimc',()=>closePortal(false));
     R.on('inv',(from,msg)=>{const r=rocks[msg.i];if(!r)return;if(msg.on){r.u.stored=true;r.u.remoteHeld=null;r.visible=false}else{r.u.stored=false;r.visible=true}});
+    R.on('megamerge',(from,msg)=>{const r0=rocks[msg.a];if(!r0)return;r0.position.set(msg.x,msg.y,msg.z);r0.u.big=true;r0.u.r*=2.4;r0.u.b*=1.5;r0.u.rest=false;r0.u.v.set(0,3.5,0);r0.u.skip=0;r0.u.padCd=0;r0.scale.setScalar(2.4);for(const k of[msg.b,msg.c,msg.d]){const r=rocks[k];if(r){r.u.stored=true;r.u.rest=false;r.visible=false;r.u.held=false;r.u.remoteHeld=null}}sfx('launch');ripple(msg.x,msg.z,1.6);shake(.28);const e=document.getElementById('bn');if(e){e.innerHTML='<small>merge</small>mega burger';e.classList.add('on');clearTimeout(bt);bt=setTimeout(()=>e.classList.remove('on'),4200)}addMsg('✦','mega burger!',1.0)});
     R.on('hit',(from,msg)=>{if(msg.to===R.id){const v=msg.v||[0,0,0];knockMe(msg.by||from,v[0],v[2])}else if(msg.by===R.id&&from!==R.id)addMsg('·','You knocked over '+nameOf(from)+'!',.35)});
     R.on('peerLeave',id=>dropRemote(id));
     R.on('peerLeaveMsg',(from,msg)=>{if(msg&&msg.id)dropRemote(msg.id)});
