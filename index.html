@@ -35,7 +35,7 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 #play,#sdn,#hostbtn,#joinbtn{background:var(--a);color:var(--k);border:0}
 #skb,#mpbtn,#mpback{background:#ffffff12;border:1px solid var(--b);font-weight:600;font-size:15px}
 #pubbtn{background:linear-gradient(135deg,#3ad9a0,#1f8fb0);color:#062c26;border:0}
-#perfbtn{background:#ffffff10;color:#cfe3e0;border:1px solid var(--b);font-weight:600;font-size:15px}
+#perfbtn{background:#ffffff10;color:#cfe3e0;border:1px solid var(--b);font-weight:600;font-size:15px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #perfbtn.on{background:linear-gradient(135deg,#ffb347,#ff7a1a);color:#1d1230;border:0}
 #asbox{margin-top:4px;padding:10px 12px;border-radius:12px;background:#0b1626cc;border:1px solid var(--b);font-family:system-ui,sans-serif}
 .as-h{color:#9fc0bb;font:700 11px system-ui;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
@@ -1305,7 +1305,7 @@ function _joining(serverName){
   }).catch(e=>{if(tok!==netTok||!inGame)return;returnHome('Could not join',netErrMsg(e,rn),'warn')});
 }
 $('play').onclick=()=>{startGame('',randSeed(),null,false)};
-$('perfbtn').onclick=()=>{PERF=!PERF;try{localStorage.setItem('rlx-perf',PERF?'1':'0')}catch(e){}applyPerf();};
+$('perfbtn').onpointerdown=(e)=>{if(e){e.preventDefault();e.stopPropagation();}PERF=!PERF;try{localStorage.setItem('rlx-perf',PERF?'1':'0')}catch(_){}applyPerf();};
 function syncBar(){const items=$('eb').children;for(const el of items){const v=el.dataset.e;if(!isNaN(+v))el.classList.toggle('on',emote===+v)}}
 $('eb').onclick=ev=>{const e=ev.target.closest('i[data-e]');if(!e)return;const v=e.dataset.e;
   if(v==='chat')toggleChat();
