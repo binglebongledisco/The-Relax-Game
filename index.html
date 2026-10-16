@@ -1877,7 +1877,7 @@ $('mpbtn').onclick=()=>{home.style.display='none';panel.style.display='block';st
   }
   const wirePeerErr=(room,peer,isJoin,fail,isSettled)=>{peer.on('error',err=>{
       const t=err&&(err.type||err.message)||'';
-      if(!isSettled()){fail(isJoin&&(t==='peer-unavailable'||t==='unavailable-id')?new Error('host-not-found'):err);return}
+      if(!isSettled()){fail(isJoin&&t==='peer-unavailable'?new Error('host-not-found'):err);return}
       if(['network','server-error','socket-error','socket-closed'].includes(t)&&room.state==='online'){room.state='failed';if(typeof returnHome==='function')returnHome('Connection lost','Your device lost its network connection. Reconnect and try again.','warn')}});
     peer.on('disconnected',()=>{if(room.state!=='online')return;room.state='reconnecting';if(typeof hud==='function')hud('reconnecting…');try{peer.reconnect()}catch(e){}})};
     window.probeRoom=function(serverName){
@@ -1924,15 +1924,12 @@ window.startRoom=function(serverName,isHost,opts){
           room._drop(conn.peer)})})});
   };
   window.joinRoom=function(serverName){
-    const _attempt=(tries)=>new Promise((resolve,reject)=>{
+    return new Promise((resolve,reject)=>{
       if(typeof Peer==='undefined'){reject(new Error('PeerJS not loaded'));return}
       const room=new Room(null,false,serverName);let peer,settled=false;
       try{peer=new Peer(null,{debug:0,config:RTC})}catch(e){reject(e);return}
       room._peer=peer;room._hostId=hostIdFor(serverName);
-      const fail=err=>{if(settled)return;settled=true;room.state='failed';room.leave();
-        const t=String((err&&(err.type||err.message))||'');
-        if(tries>0&&(t==='unavailable-id'||t==='peer-unavailable')){setTimeout(()=>_attempt(tries-1).then(resolve,reject),400);return}
-        reject(err)};
+      const fail=err=>{if(settled)return;settled=true;room.state='failed';room.leave();reject(err)};
       wirePeerErr(room,peer,true,fail,()=>settled);
       peer.on('open',id=>{room.id=id;
         if(room._hostConn){if(room.state==='reconnecting')room.state='online';return}
@@ -1946,8 +1943,6 @@ window.startRoom=function(serverName,isHost,opts){
         conn.on('close',()=>{if(room.state==='closed')return;room.state='closed';room._emitLocal('hostClose');
           if(typeof returnHome==='function')returnHome('Host disconnected','The host closed the server or lost connection. You have been returned home.','warn')});
         conn.on('error',err=>{clearTimeout(to);if(!settled)fail(err)})})});
-    });
-    return _attempt(1);
   };
   const dropRemote=id=>{const r=rem[id];if(!r)return;scene.remove(r.root);r.root.traverse(o=>{if(o.geometry)o.geometry.dispose()});
     delete rem[id]};
