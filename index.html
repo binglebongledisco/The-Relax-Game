@@ -117,6 +117,15 @@ body.ig #helpbtn{display:flex}
 #nameWarn.on{opacity:1}
 #rot{display:none}
 body.rot-mode{position:fixed;top:0;left:0;width:100vh;height:100vw;transform-origin:top left;transform:rotate(90deg) translateY(-100%);overflow:hidden}
+body.rot-mode #eb{max-width:min(46vh,400px);right:max(10px,env(safe-area-inset-bottom));top:max(10px,env(safe-area-inset-right))}
+body.rot-mode #st{max-width:min(260px,40vh);left:max(8px,env(safe-area-inset-top));top:max(8px,env(safe-area-inset-right))}
+body.rot-mode #hint{width:min(40vh,460px);bottom:max(14px,env(safe-area-inset-left))}
+body.rot-mode #gb{bottom:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-bottom))}
+body.rot-mode #jb{bottom:max(14px,env(safe-area-inset-left));right:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px))}
+body.rot-mode #rb{bottom:calc(max(14px,env(safe-area-inset-left)) + clamp(84px,15vmin,108px));right:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px))}
+body.rot-mode #ebt{bottom:calc(max(14px,env(safe-area-inset-left)) + clamp(84px,15vmin,108px));right:max(14px,env(safe-area-inset-bottom))}
+body.rot-mode #lb{right:max(14px,env(safe-area-inset-bottom));bottom:calc(max(14px,env(safe-area-inset-left)) + clamp(84px,15vmin,108px))}
+body.rot-mode #helpbtn{left:max(10px,env(safe-area-inset-top));bottom:max(10px,env(safe-area-inset-left))}
 
 /* ============ SIMPLE LEGACY CHAT ============ */
 #chatwin{display:none;position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(70px,calc(env(safe-area-inset-bottom) + 64px));width:min(340px,90vw);max-height:min(40vh,320px);background:#0b1626e8;border:1px solid #ffffff22;border-radius:10px;z-index:8;flex-direction:column;overflow:hidden;font-family:system-ui,sans-serif;color:#eef6f4;box-shadow:0 8px 24px #0007}
@@ -1317,7 +1326,7 @@ function startGame(serverName,seed,worldOpts,hostMode){
   uname=sanitizeName($('un').value);if(!uname)uname='player'+Math.floor(Math.random()*9000+1000);
   try{localStorage.setItem('rlx-name',uname)}catch(e){}
   $('un').value=uname;
-  $('home').style.display='none';$('mppanel').style.display='none';document.body.classList.add('ig');updateRot();
+  $('home').style.display='none';$('mppanel').style.display='none';document.body.classList.add('ig');updateRot();try{if(document.fullscreenEnabled&&!document.fullscreenElement)document.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>{})}catch(e){}
   inGame=true;initAudio();startMusic();runToggle=false;
   if(worldOpts)applyWorldOpts(worldOpts);
   regen(seed||randSeed());
