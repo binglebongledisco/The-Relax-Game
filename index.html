@@ -1578,7 +1578,7 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
   if(!r.visible)r.visible=true;
   if(u.held){if(!handR.visible){me.haR.getWorldPosition(r.position);r.position.y-=.05}continue}
   if(!u.rest){const py=r.position.y,gg=H(r.position.x,r.position.z),inW=py<0&&gg<0;u.v.y-=(inW?(u.fl?-7:5):18)*dt;if(inW)u.v.multiplyScalar(1-2.5*dt);
-    {const nS=Math.min(8,Math.max(1,Math.ceil(u.v.length()*dt/.2))),sd=dt/nS;for(let z2=0;z2<nS;z2++){const _ppx=r.position.x,_ppy=r.position.y,_ppz=r.position.z;r.position.addScaledVector(u.v,sd);hitCol(r);if(!u.big&&DIMIN===-1&&(!u.emitT||performance.now()-u.emitT>800)){const _g=moonGatePass(_ppx,_ppy,_ppz,r.position.x,r.position.y,r.position.z);if(_g){u.stored=true;r.visible=false;r.position.set(_g.x,_g.y,_g.z);moonGateEmit(_g,u.v,u.kind);break;}}
+    {const nS=Math.min(8,Math.max(1,Math.ceil(u.v.length()*dt/.2))),sd=dt/nS;for(let z2=0;z2<nS;z2++){r.position.addScaledVector(u.v,sd);hitCol(r);
       // TRAMP: items/rocks bounce off launch pads (checked every substep so fast movers can't skip)
       if((u.padCd=Math.max(0,(u.padCd||0)-sd))<=0)for(const pad of padPool){
         const qdx=r.position.x-pad.userData.cx,qdz=r.position.z-pad.userData.cz;
@@ -1637,37 +1637,6 @@ let koGrace=0;function knockMe(by,vx,vz){if(myKo>0||performance.now()<koGrace)re
  if(held){const u=held.u;u.held=false;u.rest=false;u.thrownBy=null;u.v.set(0,.1,0);if(rm)rm.emit('thr',{i:u.idx,p:held.position.toArray().map(x=>+x.toFixed(2)),v:[0,.1,0]});held=null;$('gb').textContent='Grab'}
  if(dragging)stopDrag();const l=Math.hypot(vx,vz)||1;P.v.x+=vx/l*6;P.v.z+=vz/l*6;P.v.y=Math.max(P.v.y,5);
  if(rm)rm.emit('hit',{by});addMsg('·','You were knocked over by '+nameOf(by)+'!',.02)}
-function moonGatePass(x0,y0,z0,x1,y1,z1){
-  for(const g of PM.values()){
-    const c=g.c;if(c.t!==4)continue;
-    const r=n=>hs(c.u*97+n,c.x*.1),a=r(2)*3.14,nx=Math.sin(a),nz=Math.cos(a),cx=c.x,cy=c.y+4.4,cz=c.z,R=4.6;
-    const d0=(x0-cx)*nx+(z0-cz)*nz,d1=(x1-cx)*nx+(z1-cz)*nz;
-    if(d0*d1>0)continue;if(d0===d1)continue;
-    const t=d0/(d0-d1);if(t<0||t>1)continue;
-    const ix=x0+(x1-x0)*t,iy=y0+(y1-y0)*t,iz=z0+(z1-z0)*t;
-    const ex=ix-cx,ey=iy-cy,ez=iz-cz,ax=ex*nx+ez*nz,rx=ex-ax*nx,rz=ez-ax*nz;
-    if(Math.sqrt(rx*rx+ey*ey+rz*rz)>R-1.2)continue;
-    return{x:ix,y:iy,z:iz,nx:nx,nz:nz};
-  }
-  return null;
-}
-function moonGateEmit(gate,srcVel,kind){
-  const vx0=srcVel.x,vz0=srcVel.z,vlen=Math.hypot(vx0,vz0)||1,ux=vx0/vlen,uz=vz0/vlen;
-  for(let k=0;k<15;k++){
-    const fan=(Math.random()-.5)*1.2,cf=Math.cos(fan),sf=Math.sin(fan),fx=ux*cf-uz*sf,fz=ux*sf+uz*cf,spd2=4+Math.random()*4,up=3+Math.random()*3;
-    let b;
-    if(kind===8){const r2=.15+Math.random()*.25;b=new T.Mesh(rg,rms[Math.floor(Math.random()*3)]);b.scale.set(r2*1.2,r2*.8,r2*1.1);b.rotation.set(Math.random()*6,Math.random()*6,0);b.castShadow=true;b.u={r:r2,kind:8,v:new T.Vector3(),rest:true,held:false,remoteHeld:null,idx:rocks.length,skip:0};rocks.push(b);scene.add(b)}
-    else{const kk=(kind>=0&&kind<=6)?kind:6;mkItem(kk);b=rocks[rocks.length-1]}
-    b.position.set(gate.x+(Math.random()-.5)*.6,gate.y+(Math.random()-.5)*.6,gate.z+(Math.random()-.5)*.6);
-    b.u.rest=false;b.u.stored=false;b.u.held=false;b.u.remoteHeld=null;b.u.skip=0;b.u.padCd=0;
-    b.u.v.set(fx*spd2,up,fz*spd2);
-    b.u.thrownBy=rm?rm.id:'me';b.u.thrownAt=performance.now();b.u.emitT=performance.now();
-    b.visible=true;
-    if(rm)rm.emit('thr',{i:b.u.idx,p:[+b.position.x.toFixed(2),+b.position.y.toFixed(2),+b.position.z.toFixed(2)],v:[+b.u.v.x.toFixed(2),+b.u.v.y.toFixed(2),+b.u.v.z.toFixed(2)]});
-  }
-  sfx('launch');ripple(gate.x,gate.z,1.8);shake(.3);
-  addMsg('\u2726','the arch spits out fifteen things!',1.0);
-}
 function spawnAllPads(){
   padReady=true;
   for(const c of pool)if(c.cx!==1e9)trySpawnPad(c.cx*CS,c.cz*CS);
