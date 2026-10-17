@@ -706,7 +706,7 @@ function leaveBoat(){if(!inBoat)return;
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
 const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1,eatChomped=0;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
 // PUNCH: ability state, craters, tumbling trees
-let punchPower=false,punchT=-1,punchCd=0,nearCrystal=null;
+let punchPower=false,punchT=-1,punchCd=0,nearCrystal=null,_pendingPOIEat=null;window._eatenPOIs=new Set();
 const craters=[],fallingTrees=[];
 const craterMat=new T.MeshBasicMaterial({color:0x1a120a,transparent:true,opacity:.72,depthWrite:false,side:T.DoubleSide});
 function mkCrater(x,z,y){const g=new T.Mesh(new T.CircleGeometry(.6+Math.random()*.15,20).rotateX(-Math.PI/2),craterMat.clone());g.position.set(x,y+.04,z);g.renderOrder=1;scene.add(g);craters.push({m:g,t:0,life:30});return g}
@@ -1462,7 +1462,10 @@ $('lb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();leaveBoat()};
 $('rb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();toggleRun()};
 $('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(eatT>=0)return;
   if(held&&(held.u.kind===6||held.u.kind===0)){eatT=0;eatChomped=0;}
-  else if(!held&&nearCrystal){held=nearCrystal;held.u.held=true;held.u.rest=false;eatT=0;eatChomped=0;sfx('grab');}
+  else if(!held&&nearCrystal){
+    if(nearCrystal.poi){_pendingPOIEat=nearCrystal.poi;eatT=0;eatChomped=0;sfx('grab');}
+    else{held=nearCrystal;held.u.held=true;held.u.rest=false;eatT=0;eatChomped=0;sfx('grab');}
+  }
 };
 $('pbtn').onpointerdown=e=>{e.preventDefault();e.stopPropagation();doPunch()};
 const downPtrs=new Set();
@@ -1625,7 +1628,8 @@ lhG.rotation.set(-.25+Math.sin(idle*1.2+1)*.02-runK*.12+sw*2.2,-.1-Math.cos(idle
 dragK+=((dragging?1:0)-dragK)*Math.min(1,dt*8);{const tg=Math.sin(idle*5)*.03*dragK;handR.position.x-=dragK*.12;handR.position.z+=tg;handR.position.y+=dragK*.05;handR.rotation.y-=dragK*.15;lhG.position.x+=dragK*.12;lhG.position.z-=tg;lhG.position.y+=dragK*.05;lhG.rotation.y+=dragK*.15}
 if(punchT>=0){const pp=punchT/.35;const thrust=Math.sin(pp*Math.PI);handR.position.z+=thrust*.28;handR.position.y+=thrust*.10;handR.rotation.x-=thrust*.9;lhG.position.z+=thrust*.20;lhG.rotation.x-=thrust*.7}
 if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.stored=true;held.u.held=false;held.u.rest=false;held.visible=false;if(rm)rm.emit('inv',{i:held.u.idx,on:1});held=null;$('gb').textContent='Grab'}
-            if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===0){held.u.stored=true;held.u.held=false;held.u.rest=false;held.visible=false;if(rm)rm.emit('inv',{i:held.u.idx,on:1});held=null;$('gb').textContent='Grab';punchPower=true;hud('✊ PUNCH unlocked');addMsg('✦','You feel incredibly strong. Walk up to a tree and punch it.',.15)}if(eatT>=EAT_DUR)eatT=-1}
+            if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===0){held.u.stored=true;held.u.held=false;held.u.rest=false;held.visible=false;if(rm)rm.emit('inv',{i:held.u.idx,on:1});held=null;$('gb').textContent='Grab';punchPower=true;hud('✊ PUNCH unlocked');addMsg('✦','You feel incredibly strong. Walk up to a tree and punch it.',.15)}
+            if(eatT>=EAT_DUR*0.5&&_pendingPOIEat){punchPower=true;hud('✊ PUNCH unlocked');addMsg('✦','You feel incredibly strong. Walk up to a tree and punch it.',.15);window._eatenPOIs.add(_pendingPOIEat.id);if(_pendingPOIEat.gm)_pendingPOIEat.gm.visible=false;_pendingPOIEat=null;}if(eatT>=EAT_DUR)eatT=-1}
 if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompose(_hp,_hq,new T.Vector3());
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
@@ -1693,7 +1697,17 @@ for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t
 punchUpdate(dt);punchGlow(dt);poiTick(dt,t);if(fr%6===0)mixAudio(uw);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
 nearCrystal=null;
-if(!held&&!dragging&&myKo<=0&&!inBoat){let bd=16;for(const r of rocks){if(r.u.kind===0&&!r.u.held&&!r.u.remoteHeld&&!r.u.stored){const d=r.position.distanceToSquared(P);if(d<bd){bd=d;nearCrystal=r}}}}
+if(!held&&!dragging&&myKo<=0&&!inBoat){
+  let bd=100; // 10 units range
+  for(const r of rocks){if(r.u.kind===0&&!r.u.held&&!r.u.remoteHeld&&!r.u.stored){const d=r.position.distanceToSquared(P);if(d<bd){bd=d;nearCrystal=r}}}
+  if(!nearCrystal){
+    for(const g of PM.values()){
+      if(window._eatenPOIs.has(g.id))continue;
+      const d=Math.pow(g.c.x-P.x,2)+Math.pow(g.c.z-P.z,2);
+      if(d<64 && d<bd){bd=d;nearCrystal={poi:g}}
+    }
+  }
+}
 $('ebt').style.display=(((held&&(held.u.kind===6||held.u.kind===0))||(!held&&nearCrystal))&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
 else{$('gb').style.transform=''}
