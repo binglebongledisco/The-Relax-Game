@@ -1698,13 +1698,13 @@ punchUpdate(dt);punchGlow(dt);poiTick(dt,t);if(fr%6===0)mixAudio(uw);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
 nearCrystal=null;
 if(!held&&!dragging&&myKo<=0&&!inBoat){
-  let bd=100; // 10 units range
+  let bd=625; // 25 units range
   for(const r of rocks){if(r.u.kind===0&&!r.u.held&&!r.u.remoteHeld&&!r.u.stored){const d=r.position.distanceToSquared(P);if(d<bd){bd=d;nearCrystal=r}}}
   if(!nearCrystal){
     for(const g of PM.values()){
       if(window._eatenPOIs.has(g.id))continue;
       const d=Math.pow(g.c.x-P.x,2)+Math.pow(g.c.z-P.z,2);
-      if(d<64 && d<bd){bd=d;nearCrystal={poi:g}}
+      if(d<625 && d<bd){bd=d;nearCrystal={poi:g}}
     }
   }
 }
