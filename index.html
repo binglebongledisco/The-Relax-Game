@@ -391,7 +391,8 @@ function islandDeltaAt(base,x,z){if(base>=LH_H_TOP)return 0;let best=0;
     const ddx=x-s.x,ddz=z-s.z,d2=ddx*ddx+ddz*ddz;if(d2>=LH_R_SEA*LH_R_SEA)continue;
     const delta=islandTopAt(Math.sqrt(d2))-base;if(delta>best)best=delta}
   return best}
-const H=(x,z)=>{if(DIMON)return DIMY;const h=BH(x,z),c=cave(x,z);const base=(!c||c.t)?h:h+(Math.min(h,c.f)-h)*(1-ss(3,9,Math.hypot(x-c.x,z-c.z)));return base+islandDeltaAt(base,x,z)};
+let HOLE=null,IN_BROKEN=false,BROKEN_Y=-500,BROKEN_G=null,GLITCH_T=0;
+const H=(x,z)=>{if(DIMON)return DIMY;if(IN_BROKEN&&Math.hypot(x-P.x,z-P.z)<140)return BROKEN_Y;const h=BH(x,z),c=cave(x,z);const base=(!c||c.t)?h:h+(Math.min(h,c.f)-h)*(1-ss(3,9,Math.hypot(x-c.x,z-c.z)));return base+islandDeltaAt(base,x,z)};
 const NZ=`float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1,0)),f.x),mix(hs(i+vec2(0,1)),hs(i+vec2(1)),f.x),f.y);}
 float fb(vec2 p){float s=0.,a=.5;for(int k=0;k<3;k++){s+=a*vn(p);p=p*2.03+7.;a*=.5;}return s;}`;
@@ -526,6 +527,8 @@ float crk=smoothstep(.04,0.,abs(vn(vW.xz*3.+vW.y*1.7)-.5))*smoothstep(.25,.45,vS
 c=mix(c,c*vec3(.72,.95,.55),smoothstep(.5,.75,vn(vW.xz*.9+3.)*.6+fb(vW.xz*.35)*.4)*(1.-smoothstep(.2,.4,vS))*smoothstep(1.,3.,vW.y)*.4);
 float ca=vW.y>0.?0.:smoothstep(.55,.9,vn(vW.xz*1.8+vec2(uT*.4,-uT*.3))*.5+vn(vW.xz*2.7-vec2(uT*.3,uT*.5))*.5);c+=vec3(.5,.8,.9)*ca*.25*smoothstep(0.,-.5,vW.y)*smoothstep(-8.,-2.,vW.y);
 c=mix(c,vec3(.93,.96,1.),smoothstep(24.,30.,vW.y+n2*3.)*(1.-smoothstep(.22,.5,vS)));c*=mix(.78,1.,smoothstep(-.4,1.1,vW.y));diffuseColor.rgb=c;`});
+const _terrHoleU={value:new T.Vector4(0,0,0,0)};
+try{const _tob=terrM.onBeforeCompile;terrM.onBeforeCompile=s=>{_tob(s);s.uniforms.uHole=_terrHoleU;s.fragmentShader=s.fragmentShader.replace('#include <common>\nuniform float uT;','#include <common>\nuniform float uT;uniform vec4 uHole;').replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(uHole.w>0.&&distance(vW.xz,uHole.xy)<uHole.z)discard;');};}catch(e){}
 const treeM=patch(new T.MeshStandardMaterial({vertexColors:true,roughness:.75,metalness:0,precision:HIGHP}),'tree2',{v:`
 mat3 im=mat3(instanceMatrix);float isc=max(length(im[0]),.001);vec3 wp=instanceMatrix[3].xyz;
 float tp=wp.x*.21+wp.z*.17;
@@ -883,6 +886,9 @@ function regen(q,keepPos){
   runToggle=false;syncRunBtn();
   {const cx=P.x,cz=P.z;let placed=false;for(let rr=6;rr<=80&&!placed;rr+=2){for(let k=0;k<32;k++){const a=k*(6.2832/32);const x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr;if(H(x,z)<-1.2){boat.root.position.set(x,0,z);boat.heading=Math.atan2(cx-x,cz-z);placed=true;break}}}if(!placed){const dir=Math.atan2(P.x-cx,P.z-cz);boat.root.position.set(cx+Math.sin(dir)*20,0,cz+Math.cos(dir)*20)}boat.root.rotation.y=boat.heading}
   spawnAllPads();
+  if(IN_BROKEN)exitBroken();
+  if(BROKEN_G){scene.remove(BROKEN_G);BROKEN_G.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});BROKEN_G=null}
+  spawnHole();
 }
 const MUSIC="Bloxiest Licka.mp3",MUSIC_VOLUME=.2;
 let musicEl=null;
@@ -1454,7 +1460,7 @@ let bobX=0,bobY=0,bobRoll=0;
 let ix=cutT>0?0:Math.max(-1,Math.min(1,mv.x+(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)));
 let iy=cutT>0?0:Math.max(-1,Math.min(1,mv.y+(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)));
 const sy=Math.sin(ya),cy=Math.cos(ya),g=H(P.x,P.z);
-const swim=!inBoat&&g<-0.6&&P.y<1.0;
+const swim=!inBoat&&!IN_BROKEN&&g<-0.6&&P.y<1.0;
 const k=Math.min(1,dt*(swim?4:10));
 running = runToggle && !inBoat && !swim && !dragging;
 if(myKo>0){P.v.y-=18*dt;P.y+=P.v.y*dt;const gg=H(P.x,P.z);if(P.y<=gg){P.y=gg;P.v.y=0}
@@ -1516,7 +1522,10 @@ else{
   else{const runMod=running?1.85:1;const sp=(g<.1?3:5.2)*runMod,tx=(-sy*iy+cy*ix)*sp,tz=(-cy*iy-sy*ix)*sp;
     P.v.x+=(tx-P.v.x)*k;P.v.z+=(tz-P.v.z)*k;P.x+=P.v.x*dt;P.z+=P.v.z*dt;
     resolvePointCollisions(P,P.y,0.4);
-    const g2=H(P.x,P.z);P.v.y-=18*dt;P.y+=P.v.y*dt;if(g2<-.6&&P.v.y>0&&P.y>gYw+1.4)P.v.y=0;
+    const overHole=HOLE&&Math.hypot(P.x-HOLE.x,P.z-HOLE.z)<HOLE.r*.92;
+    if(overHole&&!IN_BROKEN&&P.y<HOLE.y-3)enterBroken();
+    const g2=IN_BROKEN?BROKEN_Y:(overHole?-1e9:H(P.x,P.z));
+    P.v.y-=18*dt;P.y+=P.v.y*dt;if(!overHole&&!IN_BROKEN&&g2<-.6&&P.v.y>0&&P.y>gYw+1.4)P.v.y=0;
     if(P.y<=g2){if(P.v.y<-9)shake(Math.min(.55,(-P.v.y-9)*.07));P.y=g2;P.v.y=0;if(jump){sfx('jump');P.v.y=7.0}}}
   if(!inBoat&&!swim&&myKo<=0){
     for(const pad of padPool){
@@ -1556,8 +1565,9 @@ else{
   dirAnim(me,P.v.x,P.v.z,byaw,dt);{const rel=Math.atan2(Math.sin(ya+Math.PI-byaw),Math.cos(ya+Math.PI-byaw)),kk=Math.min(1,dt*10);me.hy=(me.hy||0)+(Math.max(-1.1,Math.min(1.1,rel))-(me.hy||0))*kk;me.hx=(me.hx||0)+(Math.max(-.7,Math.min(.7,-pt*.8))-(me.hx||0))*kk}
   pose(me,U.uT.value,ph,spd,mdl,!!held,0,runFlag);net(dt,U.uT.value,spd,mdl);if(fr%30===0)hud()}
 if((tp||emote>0)&&myKo<=0&&!pulledBy){cam.position.addScaledVector(fw,-3.4).addScaledVector(rt,.5);cam.position.y=Math.max(cam.position.y,H(cam.position.x,cam.position.z)+.4)}
-const uw=cam.position.y<0;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
-if(!uw)fogC.copy(FOG0);
+const uw=!IN_BROKEN&&cam.position.y<0;
+if(!IN_BROKEN){if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
+if(!uw)fogC.copy(FOG0);}
 const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && (!!held||!!dragging||eatT>=0);
 handVis+=((wantHand?1:0)-handVis)*Math.min(1,dt*7);
 handR.visible=handVis>0.02;lhVis+=(((wantHand&&dragging)?1:0)-lhVis)*Math.min(1,dt*7);lhG.visible=handR.visible&&lhVis>.02;
@@ -1578,7 +1588,7 @@ if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
 skyM.position.copy(cam.position);water.position.set(P.x,0,P.z);
 sun.target.position.set(Math.round(P.x/2)*2,0,Math.round(P.z/2)*2);sun.position.copy(sun.target.position).addScaledVector(SUN,90);
-if(!DIMON)chunks(false);portalTick(dt);if(fr%4===0)rd.shadowMap.needsUpdate=true;
+if(!DIMON&&!IN_BROKEN)chunks(false);portalTick(dt);if(IN_BROKEN)brokenTick(dt);if(fr%4===0)rd.shadowMap.needsUpdate=true;
 for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
   if(u.stored){r.visible=false;continue}
   if(u.remoteHeld){const holder=rem[u.remoteHeld];
@@ -1622,7 +1632,9 @@ for(let i=0;i<rocks.length;i++){const r=rocks[i],u=r.u;
         tdone(r);
       }
     }
-    const gy=H(r.position.x,r.position.z)+u.r*.5;
+    const rOverHole=HOLE&&Math.hypot(r.position.x-HOLE.x,r.position.z-HOLE.z)<HOLE.r*.92;
+    const gy=rOverHole?-1e9:H(r.position.x,r.position.z)+u.r*.5;
+    if(rOverHole&&r.position.y<HOLE.y-40)place(r);
     if(r.position.y<gy){r.position.y=gy;tdone(r);
       if(u.v.y<-2){u.v.y*=-(u.b||.3);u.v.x*=.7;u.v.z*=.7}else{u.v.y=0;u.v.x*=.85;u.v.z*=.85;if(Math.hypot(u.v.x,u.v.z)<.4){u.rest=true;u.skip=0}}}}
   if(i===fr%rocks.length&&(u.rest||u.fl)&&r.position.distanceToSquared(P)>3600)place(r);
@@ -1663,6 +1675,93 @@ function trySpawnPad(ox,oz){if(!padReady)return;const gx=Math.floor(ox/PAD_CELL)
   scene.add(g);g.userData.gk=gk;g.userData.cx=site.x;g.userData.cz=site.z;g.userData.cy=site.y;g.userData.cooldown=0;
   padPool.push(g);
   if(padPool.length>PAD_MAX){let far=-1,fi=-1;for(let i=0;i<padPool.length;i++){const p=padPool[i];const d2=(p.userData.cx-P.x)*(p.userData.cx-P.x)+(p.userData.cz-P.z)*(p.userData.cz-P.z);if(d2>far){far=d2;fi=i}}if(fi>=0){scene.remove(padPool[fi]);padPool.splice(fi,1)}}}
+function spawnHole(){
+  if(!inGame)return;
+  if(HOLE&&HOLE.mesh){scene.remove(HOLE.mesh);HOLE.mesh.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()})}
+  HOLE=null;_terrHoleU.value.set(0,0,0,0);
+  let bx=0,bz=0,found=false;
+  for(let rr=12;rr<=32&&!found;rr+=2)for(let k=0;k<16;k++){const a=k*(6.2832/16)+Math.random()*.3;const x=P.x+Math.cos(a)*rr,z=P.z+Math.sin(a)*rr,h=H(x,z);
+    if(h<1.5||h>18||inPit(x,z))continue;
+    let ok=true;for(let i=0;i<6;i++){const aa=i*1.047;if(Math.abs(H(x+Math.cos(aa)*2.8,z+Math.sin(aa)*2.8)-h)>.9){ok=false;break}}
+    if(!ok)continue;
+    for(const c of colliders){if((x-c.x)**2+(z-c.z)**2<(c.r+3.5)**2){ok=false;break}}
+    if(!ok)continue;
+    bx=x;bz=z;found=true;break}
+  if(!found){const a=Math.random()*6.2832;bx=P.x+Math.cos(a)*16;bz=P.z+Math.sin(a)*16}
+  const hy=H(bx,bz),R=2.9,grp=new T.Group();
+  const tube=new T.Mesh(new T.CylinderGeometry(R*.94,R*.55,22,24,1,true),new T.MeshBasicMaterial({color:0x04020a,side:T.DoubleSide}));
+  tube.position.set(bx,hy-11,bz);grp.add(tube);
+  const rim=new T.Mesh(new T.TorusGeometry(R,.32,8,32).rotateX(Math.PI/2),new T.MeshLambertMaterial({color:0x2a1e14}));
+  rim.position.set(bx,hy+.02,bz);grp.add(rim);
+  const glow=new T.Mesh(new T.RingGeometry(R*.5,R*.9,32).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0x6a10c0,transparent:true,opacity:.45,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide}));
+  glow.position.set(bx,hy+.03,bz);grp.add(glow);
+  scene.add(grp);
+  HOLE={x:bx,z:bz,y:hy,r:R,mesh:grp,glow:glow};
+  _terrHoleU.value.set(bx,bz,R*.92,1);
+  addMsg('·','a hole opened nearby...',.75);
+}
+function enterBroken(){
+  if(IN_BROKEN)return;
+  IN_BROKEN=true;
+  BROKEN_Y=HOLE?HOLE.y-22:-22;
+  if(!BROKEN_G)buildBroken();
+  if(BROKEN_G)BROKEN_G.visible=true;
+  skyM.visible=false;water.visible=false;
+  fogC.set(0x0a0510);scene.fog.density=.022;
+  addMsg('✦','you fell through the hole',1.0);
+}
+function exitBroken(){
+  if(!IN_BROKEN)return;
+  IN_BROKEN=false;
+  if(BROKEN_G)BROKEN_G.visible=false;
+  if(HOLE){const tx=HOLE.x+HOLE.r+2,tz=HOLE.z;P.set(tx,Math.max(H(tx,tz)+.05,.5),tz)}
+  else P.set(0,Math.max(H(0,0)+1,1),0);
+  P.v.set(0,0,0);
+  skyM.visible=true;water.visible=true;
+  fogC.copy(FOG0);scene.fog.density=.014;
+  addMsg('·','you climbed out of the hole',.5);
+  chunks(true);
+}
+function buildBroken(){
+  const cx=HOLE?HOLE.x:0,cz=HOLE?HOLE.z:0,cy=BROKEN_Y;
+  BROKEN_G=new T.Group();BROKEN_G.visible=false;scene.add(BROKEN_G);
+  const floor=new T.Mesh(new T.PlaneGeometry(500,500,1,1).rotateX(-Math.PI/2),new T.ShaderMaterial({uniforms:{uT:U.uT},vertexShader:'varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',fragmentShader:'varying vec3 vW;uniform float uT;'+NZ+'void main(){vec2 p=vW.xz*.35;float t=uT;float n=fb(p+t*.07),m=vn(p*2.3-t*.11);float h=fract(n*4.+m*3.+t*.06);vec3 c=.5+.5*cos(6.283*(h+vec3(0.,.33,.67)));float gl=smoothstep(.94,1.,vn(p*7.-t*.3));c+=gl*vec3(1.5,1.5,1.5);c=mix(c,vec3(.15,.02,.35),smoothstep(.55,.85,fb(p*.4+t*.03)));gl_FragColor=vec4(c,1.);}'}));
+  floor.position.set(cx,cy,cz);BROKEN_G.add(floor);
+  BROKEN_G.userData.glitches=[];
+  const cols=[0xff2aff,0x2affff,0xffff2a,0xff2a2a,0x2aff2a,0x9a2aff];
+  for(let i=0;i<44;i++){const s=.6+Math.random()*2.4;
+    const m=new T.Mesh(new T.BoxGeometry(s,s,s),new T.MeshBasicMaterial({color:cols[i%cols.length]}));
+    const a=Math.random()*6.2832,rr=8+Math.random()*55;
+    m.position.set(cx+Math.cos(a)*rr,cy+1+Math.random()*10,cz+Math.sin(a)*rr);
+    m.rotation.set(Math.random()*6,Math.random()*6,Math.random()*6);
+    BROKEN_G.add(m);
+    BROKEN_G.userData.glitches.push({m,ry:(Math.random()-.5)*2,rx:(Math.random()-.5)*2,baseY:m.position.y});
+  }
+  const exit=new T.Mesh(new T.TorusGeometry(1.5,.22,10,32).rotateX(Math.PI/2),new T.MeshBasicMaterial({color:0xff2aff}));
+  exit.position.set(cx+8,cy+.3,cz);BROKEN_G.add(exit);
+  BROKEN_G.userData.exit=exit;
+  BROKEN_G.userData.cx=cx;BROKEN_G.userData.cy=cy;BROKEN_G.userData.cz=cz;
+}
+function brokenTick(dt){
+  if(!IN_BROKEN)return;
+  const t=U.uT.value;GLITCH_T+=dt;
+  if(BROKEN_G){
+    const gl=BROKEN_G.userData.glitches;
+    if(gl)for(const g of gl){g.m.rotation.y+=dt*g.ry;g.m.rotation.x+=dt*g.rx*.5;g.m.position.y=g.baseY+Math.sin(t*1.7+g.m.position.x*.3)*1.5}
+    const ex=BROKEN_G.userData.exit;
+    if(ex){ex.rotation.z+=dt*2;ex.scale.setScalar(1+Math.sin(t*3)*.1);
+      if(Math.hypot(P.x-ex.position.x,P.z-ex.position.z)<1.9){exitBroken();return}}
+  }
+  if(GLITCH_T>1.2){GLITCH_T=0;const r=Math.random();
+    if(r<.18)shake(.25);
+    else if(r<.32){const fov0=cam.fov;cam.fov=55+Math.random()*45;cam.updateProjectionMatrix();setTimeout(()=>{cam.fov=fov0;cam.updateProjectionMatrix()},90)}
+    else if(r<.46){cam.rotation.z+=(Math.random()-.5)*.5}
+    else if(r<.6&&BROKEN_G){const gl=BROKEN_G.userData.glitches;if(gl&&gl.length){const g=gl[Math.random()*gl.length|0];const cx=BROKEN_G.userData.cx,cz=BROKEN_G.userData.cz,cy=BROKEN_G.userData.cy;g.m.position.set(cx+(Math.random()-.5)*70,cy+1+Math.random()*8,cz+(Math.random()-.5)*70);g.m.material.color.setHex([0xff2aff,0x2affff,0xffff2a,0xffffff][Math.random()*4|0])}}
+    else if(r<.72){try{if(aG&&ac)aG.gain.setTargetAtTime(Math.min(1,MASTER*1.6),ac.currentTime,.02);setTimeout(()=>{try{if(aG&&ac)aG.gain.setTargetAtTime(muted?0:MASTER*SET.master,ac.currentTime,.05)}catch(e){}},160)}catch(e){}}
+    else if(r<.86){const el=$('bn');if(el){el.innerHTML='<small>glitch</small>'+['ERR','SIGSEGV','undef','NaN','???','null','0x00'][Math.random()*7|0];el.classList.add('on');clearTimeout(bt);bt=setTimeout(()=>el.classList.remove('on'),700)}}
+    else if(BROKEN_G){const cx=BROKEN_G.userData.cx,cz=BROKEN_G.userData.cz;const q=Math.random()*6.2832,dd=8+Math.random()*20;P.x=cx+Math.cos(q)*dd;P.z=cz+Math.sin(q)*dd;P.v.set(0,0,0);}
+  }
+}
 spawnAllPads();
 initPerf();
 
