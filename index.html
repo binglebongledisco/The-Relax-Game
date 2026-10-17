@@ -1353,7 +1353,7 @@ function _startHosting(serverName,seed,opts){
     addMsg('·','You are hosting "'+rn+'". Open Help › Players to see who is here.',.1);
     hud('hosting');
     setTimeout(()=>R.broadcastPlayerList(),300);
-  }).catch(e=>{if(tok!==netTok||!inGame)return;returnHome('Could not host',netErrMsg(e,rn),'warn')})
+  }).catch(e=>{if(tok!==netTok||!inGame)return;const _et=String((e&&(e.type||e.message))||'');if(_et==='unavailable-id'&&serverName){addMsg('·','"'+rn+'" is already hosted — joining instead.',.1);_joining(rn);return}returnHome('Could not host',netErrMsg(e,rn),'warn')})
 }
 function _joining(serverName){
   rn=sanitizeServerName(serverName);
@@ -1697,7 +1697,7 @@ requestAnimationFrame(loop);
       wrap.appendChild(row);
       window.probeRoom(r.id).then(info=>{
         if(info.online){row.classList.add('online');cnt.textContent=(info.count||1)+' online';row.onclick=()=>startGame(r.id,null,null,false)}
-        else{cnt.textContent='create';row.onclick=()=>startGame(r.id,randSeed(),null,true)}
+        else{cnt.textContent='create';row.onclick=()=>{if(!window.probeRoom){startGame(r.id,randSeed(),null,true);return}window.probeRoom(r.id).then(i2=>{if(i2.online)startGame(r.id,null,null,false);else startGame(r.id,randSeed(),null,true)}).catch(()=>startGame(r.id,randSeed(),null,true))}}
       }).catch(()=>{cnt.textContent='?'});
     }
   }
