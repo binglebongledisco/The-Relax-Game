@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>BloxLicka</title><!-- cb:1792186831 -->
+<html lang="en"><head><meta charset="utf-8"><title>BloxLicka</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>
 *{box-sizing:border-box}
@@ -115,17 +115,8 @@ body.ig #helpbtn{display:flex}
 #hpdiagnostics{font:11px monospace;color:#9fc0bb;background:#0007;border:1px solid var(--b);border-radius:10px;padding:10px;white-space:pre-wrap;max-height:180px;overflow:auto}
 #nameWarn{position:fixed;left:50%;transform:translateX(-50%);top:120px;background:#b33030ee;color:#fff;padding:10px 16px;border-radius:12px;font:600 13px system-ui;z-index:15;max-width:90vw;text-align:center;opacity:0;pointer-events:none;transition:opacity .35s}
 #nameWarn.on{opacity:1}
-#rot{display:none}
-body.rot-mode{position:fixed;top:0;left:0;width:100vh;height:100vw;transform-origin:top left;transform:rotate(90deg) translateY(-100%);overflow:hidden}
-body.rot-mode #eb{max-width:min(46vh,400px);right:max(10px,env(safe-area-inset-bottom));top:max(10px,env(safe-area-inset-right))}
-body.rot-mode #st{max-width:min(260px,40vh);left:max(8px,env(safe-area-inset-top));top:max(8px,env(safe-area-inset-right))}
-body.rot-mode #hint{width:min(40vh,460px);bottom:max(14px,env(safe-area-inset-left))}
-body.rot-mode #gb{bottom:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-bottom))}
-body.rot-mode #jb{bottom:max(14px,env(safe-area-inset-left));right:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px))}
-body.rot-mode #rb{bottom:calc(max(14px,env(safe-area-inset-left)) + clamp(84px,15vmin,108px));right:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px))}
-body.rot-mode #ebt{bottom:calc(max(14px,env(safe-area-inset-left)) + clamp(84px,15vmin,108px));right:max(14px,env(safe-area-inset-bottom))}
-body.rot-mode #lb{right:max(14px,env(safe-area-inset-bottom));bottom:calc(max(14px,env(safe-area-inset-left)) + clamp(84px,15vmin,108px))}
-body.rot-mode #helpbtn{left:max(10px,env(safe-area-inset-top));bottom:max(10px,env(safe-area-inset-left))}
+#rot{display:none;position:fixed;inset:0;background:#123;color:#fff;align-items:center;justify-content:center;font-size:clamp(16px,2.5vmin,22px);z-index:9;text-align:center;padding:20px}
+@media (orientation:portrait) and (pointer:coarse){body.ig #rot{display:flex}}
 
 /* ============ SIMPLE LEGACY CHAT ============ */
 #chatwin{display:none;position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(70px,calc(env(safe-area-inset-bottom) + 64px));width:min(340px,90vw);max-height:min(40vh,320px);background:#0b1626e8;border:1px solid #ffffff22;border-radius:10px;z-index:8;flex-direction:column;overflow:hidden;font-family:system-ui,sans-serif;color:#eef6f4;box-shadow:0 8px 24px #0007}
@@ -416,9 +407,8 @@ const scene=new T.Scene();
 const cam=new T.PerspectiveCamera(70,1,.1,400);
 cam.rotation.order='YXZ';scene.add(cam);
 scene.fog=new T.FogExp2(0xb9cfe6,.014);const fogC=scene.fog.color,FOG0=fogC.clone();
-function updateRot(){const cur=document.body.classList.contains('rot-mode');const want=document.body.classList.contains('ig')&&innerHeight>innerWidth&&window.matchMedia&&window.matchMedia('(pointer:coarse)').matches;if(want!==cur){document.body.classList.toggle('rot-mode',want);rs()}}
-function rs(){const rot=document.body.classList.contains('rot-mode');const w=rot?innerHeight:innerWidth,h=rot?innerWidth:innerHeight;rd.setPixelRatio(pr);rd.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
-addEventListener('resize',()=>{updateRot();rs()});addEventListener('orientationchange',()=>{updateRot();rs()});rs();updateRot();
+function rs(){rd.setPixelRatio(pr);rd.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
+addEventListener('resize',rs);rs();
 const SET={master:1.0,music:1.0,pr:2,fov:70,sens:1.0,invertY:false,minimap:true,shadows:true,reflect:true};
 let REFLECT=true,PMAX=pm;
 function loadSet(){try{const s=JSON.parse(localStorage.getItem('rlx-settings')||'{}');for(const k in SET)if(k in s&&typeof s[k]===typeof SET[k])SET[k]=s[k]}catch(e){}}
@@ -1106,7 +1096,7 @@ function returnHome(title,msg,kind){
   rm=null;rn='';inGame=false;mutedByHost=false;lastPlayerList=[];
   boatAuthority=null;inBoat=false;mySeat=-1;boat.occupants=[null,null];
   for(const k in rem){try{scene.remove(rem[k].root)}catch(e){}delete rem[k]}
-  document.body.classList.remove('ig');updateRot();
+  document.body.classList.remove('ig');
   $('home').style.display='flex';
   $('mppanel').style.display='none';
   $('chatwin').classList.remove('on');
@@ -1326,8 +1316,7 @@ function startGame(serverName,seed,worldOpts,hostMode){
   uname=sanitizeName($('un').value);if(!uname)uname='player'+Math.floor(Math.random()*9000+1000);
   try{localStorage.setItem('rlx-name',uname)}catch(e){}
   $('un').value=uname;
-  $('home').style.display='none';$('mppanel').style.display='none';document.body.classList.add('ig');updateRot();
-  try{if(document.fullscreenEnabled&&!document.fullscreenElement)document.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>{})}catch(e){}
+  $('home').style.display='none';$('mppanel').style.display='none';document.body.classList.add('ig');
   inGame=true;initAudio();startMusic();runToggle=false;
   if(worldOpts)applyWorldOpts(worldOpts);
   regen(seed||randSeed());
@@ -1353,7 +1342,7 @@ function _startHosting(serverName,seed,opts){
     addMsg('·','You are hosting "'+rn+'". Open Help › Players to see who is here.',.1);
     hud('hosting');
     setTimeout(()=>R.broadcastPlayerList(),300);
-  }).catch(e=>{if(tok!==netTok||!inGame)return;const _et=String((e&&(e.type||e.message))||'');if(_et==='unavailable-id'&&serverName){addMsg('·','"'+rn+'" is already hosted — joining instead.',.1);_joining(rn);return}returnHome('Could not host',netErrMsg(e,rn),'warn')})
+  }).catch(e=>{if(tok!==netTok||!inGame)return;returnHome('Could not host',netErrMsg(e,rn),'warn')})
 }
 function _joining(serverName){
   rn=sanitizeServerName(serverName);
@@ -1422,16 +1411,15 @@ function releasePtr(id){
   if(id===look){look=null;lx=0;ly=0}}
 function releaseAllPtrs(){for(const id of [...downPtrs])releasePtr(id);joy=null;look=null;mv.x=mv.y=0;$('jr').style.display='none'}
 cv.onpointerdown=e=>{
-  const rot=document.body.classList.contains('rot-mode');
   if(joy!==null&&!downPtrs.has(joy)){joy=null;mv.x=mv.y=0;$('jr').style.display='none'}
   if(look!==null&&!downPtrs.has(look))look=null;
   try{cv.setPointerCapture(e.pointerId)}catch(_){}
   downPtrs.add(e.pointerId);
   $('hint').style.opacity=0;
-  if(e.pointerType!=='mouse'&&e.clientX<innerWidth*.45&&joy==null){joy=e.pointerId;jo=[e.clientX,e.clientY];const j=$('jr');j.style.display='block';if(rot){j.style.left=e.clientY+'px';j.style.top=(innerWidth-e.clientX)+'px'}else{j.style.left=jo[0]+'px';j.style.top=jo[1]+'px'}}
+  if(e.pointerType!=='mouse'&&e.clientX<innerWidth*.45&&joy==null){joy=e.pointerId;jo=[e.clientX,e.clientY];const j=$('jr');j.style.display='block';j.style.left=jo[0]+'px';j.style.top=jo[1]+'px'}
   else if(look==null){look=e.pointerId;lx=e.clientX;ly=e.clientY}};
-cv.onpointermove=e=>{const rot=document.body.classList.contains('rot-mode');if(e.pointerId===joy){let dx=(e.clientX-jo[0])/55,dy=(e.clientY-jo[1])/55;const l=Math.hypot(dx,dy);if(l>1){dx/=l;dy/=l}if(rot){mv.x=dy;mv.y=dx;$('jk').style.transform=`translate(${dy*35}px,${-dx*35}px)`}else{mv.x=dx;mv.y=-dy;$('jk').style.transform=`translate(${dx*35}px,${dy*35}px)`}}
-else if(e.pointerId===look){const ss=.0055*SET.sens,iv=SET.invertY?-1:1;if(rot){ya-=(e.clientY-ly)*ss;pt=Math.max(-1.45,Math.min(1.45,pt+(e.clientX-lx)*ss*iv))}else{ya-=(e.clientX-lx)*ss;pt=Math.max(-1.45,Math.min(1.45,pt-(e.clientY-ly)*ss*iv))}lx=e.clientX;ly=e.clientY}};
+cv.onpointermove=e=>{if(e.pointerId===joy){let dx=(e.clientX-jo[0])/55,dy=(e.clientY-jo[1])/55;const l=Math.hypot(dx,dy);if(l>1){dx/=l;dy/=l}mv.x=dx;mv.y=-dy;$('jk').style.transform=`translate(${dx*35}px,${dy*35}px)`}
+else if(e.pointerId===look){const ss=.0055*SET.sens;ya-=(e.clientX-lx)*ss;pt=Math.max(-1.45,Math.min(1.45,pt-(e.clientY-ly)*ss*(SET.invertY?-1:1)));lx=e.clientX;ly=e.clientY}};
 cv.onpointerup=cv.onpointercancel=cv.onlostpointercapture=e=>releasePtr(e.pointerId);
 addEventListener('blur',releaseAllPtrs);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAllPtrs()});
@@ -1697,7 +1685,7 @@ requestAnimationFrame(loop);
       wrap.appendChild(row);
       window.probeRoom(r.id).then(info=>{
         if(info.online){row.classList.add('online');cnt.textContent=(info.count||1)+' online';row.onclick=()=>startGame(r.id,null,null,false)}
-        else{cnt.textContent='create';row.onclick=()=>{if(!window.probeRoom){startGame(r.id,randSeed(),null,true);return}window.probeRoom(r.id).then(i2=>{if(i2.online)startGame(r.id,null,null,false);else startGame(r.id,randSeed(),null,true)}).catch(()=>startGame(r.id,randSeed(),null,true))}}
+        else{cnt.textContent='create';row.onclick=()=>startGame(r.id,randSeed(),null,true)}
       }).catch(()=>{cnt.textContent='?'});
     }
   }
