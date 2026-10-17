@@ -15,8 +15,6 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 #rb{display:none;right:calc(max(14px,env(safe-area-inset-right)) + clamp(84px,15vmin,108px));bottom:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px);font-size:clamp(10px,1.6vmin,13px);background:radial-gradient(circle at 35% 30%,#7ecc85,#1f9b1f);color:#0b3a0b;font-weight:900}
 #rb.on{background:radial-gradient(circle at 35% 30%,#eec06a,#d97a2a);color:#3a1160}
 #ebt{display:none;right:max(14px,env(safe-area-inset-right));bottom:calc(max(14px,env(safe-area-inset-bottom)) + clamp(84px,15vmin,108px));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px);font-size:clamp(10px,1.6vmin,13px);background:radial-gradient(circle at 35% 30%,#ffd76a,#d97a2a);color:#3a1160;font-weight:900}
-#pbtn{display:none;right:calc(max(14px,env(safe-area-inset-right)) + clamp(84px,15vmin,108px));bottom:max(14px,env(safe-area-inset-bottom));width:clamp(70px,13.5vmin,96px);height:clamp(70px,13.5vmin,96px);font-size:clamp(10px,1.6vmin,13px);background:radial-gradient(circle at 35% 30%,#fff2b0,#c8901c);color:#3a1160;font-weight:900}
-#pbtn.on{box-shadow:0 0 22px #ffd76aaa}
 #st{display:none;position:fixed;left:max(8px,env(safe-area-inset-left));top:max(8px,env(safe-area-inset-top));color:#fff;font:600 11px system-ui;text-shadow:0 1px 4px #000a;background:#0009;padding:5px 10px;border-radius:12px;max-width:260px;line-height:1.3;z-index:8;pointer-events:none;white-space:pre-line;border:1px solid #ffffff22;opacity:.94}
 #eb{display:none;position:fixed;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));flex-direction:row;gap:clamp(3px,.6vmin,5px);align-items:center;background:#0007;padding:clamp(4px,.8vmin,6px);border-radius:24px;border:1px solid #fff4;z-index:4}
 #eb i{font-style:normal;display:flex;align-items:center;justify-content:center;width:clamp(32px,5.4vmin,42px);height:clamp(32px,5.4vmin,42px);background:#ffffff15;border:1px solid #fff5;border-radius:50%;font-size:clamp(15px,2.8vmin,20px);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:background .15s,border-color .15s;line-height:1}
@@ -210,7 +208,7 @@ body.ig::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:2;b
 </head><body>
 <canvas id="c"></canvas><div id="ov"></div>
 <div id="jr"><div id="jk"></div></div>
-<button id="jb">Up</button><button id="gb">Grab</button><button id="lb">Leave boat</button><button id="rb">Run</button><button id="ebt">Eat</button><button id="pbtn">Punch</button>
+<button id="jb">Up</button><button id="gb">Grab</button><button id="lb">Leave boat</button><button id="rb">Run</button><button id="ebt">Eat</button>
 <div id="hint">Left thumb walks, right thumb looks. Tap Run to toggle walking and running. Grab rocks, crystals, ducks, beach balls and mushrooms; hold to charge, release to throw. Throw rocks flat and fast across water to skip them. Stand next to a friend and press Grab to pull them around. Wade into a pond and look down to dive. Walk into caves and ruins to discover them — glowing ore nodes are embedded in the walls. Two people can ride the boat — walk up to it and tap Drive or Seat. Press I for inventory (Q stores what you hold) and use the portal button in the top-right menu to open a dimension. Press R for ragdoll.</div>
 <div id="home">
   <div class="hc">
@@ -705,42 +703,6 @@ function leaveBoat(){if(!inBoat)return;
   const lb=document.getElementById('lb');if(lb)lb.style.display='none'}
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
 const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1,eatChomped=0;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
-// PUNCH: ability state, craters, tumbling trees
-let punchPower=false,punchT=-1,punchCd=0,nearCrystal=null,_pendingPOIEat=null;window._eatenPOIs=new Set();
-const craters=[],fallingTrees=[];
-const craterMat=new T.MeshBasicMaterial({color:0x1a120a,transparent:true,opacity:.72,depthWrite:false,side:T.DoubleSide});
-function mkCrater(x,z,y){const g=new T.Mesh(new T.CircleGeometry(.6+Math.random()*.15,20).rotateX(-Math.PI/2),craterMat.clone());g.position.set(x,y+.04,z);g.renderOrder=1;scene.add(g);craters.push({m:g,t:0,life:30});return g}
-function mkFallingTree(x,y,z,sc,ry,vyaw,vx,vz){const m=new T.Mesh(treeG,treeM.clone());m.material.onBeforeCompile=null;m.position.set(x,y,z);m.scale.setScalar(sc);m.rotation.y=ry;
-  const t={m,vx,vz,vy:0,vyaw,rest:false,landed:false};m.castShadow=true;scene.add(m);fallingTrees.push(t);return t}
-function punchUpdate(dt){for(let i=craters.length-1;i>=0;i--){const c=craters[i];c.t+=dt;c.m.material.opacity=.72*Math.max(0,1-c.t/c.life);if(c.t>=c.life){scene.remove(c.m);c.m.geometry.dispose();c.m.material.dispose();craters.splice(i,1)}}
-  for(let i=fallingTrees.length-1;i>=0;i--){const f=fallingTrees[i];if(f.rest)continue;const gg=H(f.m.position.x,f.m.position.z);f.vy-=20*dt;f.m.position.y+=f.vy*dt;f.m.position.x+=f.vx*dt;f.m.position.z+=f.vz*dt;f.vx*=1-1.2*dt;f.vz*=1-1.2*dt;f.m.rotation.x+=f.vyaw*dt;f.m.rotation.z+=f.vyaw*.7*dt;
-    if(f.m.position.y<=gg){f.m.position.y=gg;f.rest=true;f.landed=true;sfx('thud',1);shake(.5);ripple(f.m.position.x,f.m.position.z,1.4);mkCrater(f.m.position.x,f.m.position.z,gg);addMsg('·','crash!',.05)}}
-  if(punchT>=0){punchT+=dt;if(punchT>=.35)punchT=-1}
-  if(punchCd>0)punchCd-=dt;
-  const p=$('pbtn');if(p){const show=punchPower&&inGame;p.style.display=show?'block':'none';p.classList.toggle('on',show)}}
-function doPunch(){if(!punchPower||!inGame||myKo>0||cutT>0||punchCd>0||eatT>=0)return;if(rm)return; // solo-only for stage A
-  punchCd=.42;punchT=0;sfx('thud',1);shake(.35);
-  const fx=Math.sin(ya),fz=Math.cos(ya);
-  const px=P.x-fx*1.6,pz=P.z-fz*1.6;
-  const gy=Math.max(H(px,pz),0);
-  // find nearest tree collider in front of us (within 3.5 units of P, dot>0 forward)
-  let bestC=null,bestD=9;for(const c of colliders){if(c.key&&c.key.indexOf('chunk_')!==0)continue;const dx=c.x-P.x,dz=c.z-P.z;const d2=dx*dx+dz*dz;if(d2>bestD)continue;const fw=dx*fx+dz*fz;if(fw<0)continue;const cd=c.r*4.5;if(d2<cd*cd){bestD=d2;bestC=c}}
-  if(bestC){const c=bestC;
-    // kill the collider so player can walk through the space
-    const idx=colliders.indexOf(c);if(idx>=0)colliders.splice(idx,1);
-    ripple(c.x,c.z,2);shake(.7);sfx('chop',1);
-    const sc=c.h/4.6; // collider h = 4.6*sc from placement loop
-    const vyaw=(Math.random()-.5)*3;
-    mkFallingTree(c.x,c.y,c.z,sc,Math.random()*6.3,vyaw,fx*4+Math.random()*1.5,fz*4+Math.random()*1.5);
-    mkCrater(c.x,c.z,c.y);
-    hud('SMASH!');
-  }else{
-    // ground punch — just crater + shock
-    mkCrater(px,pz,gy);
-    ripple(px,pz,1.8);
-    hud('punch');
-  }
-}
 // SKIP: place() now also resets skip counter when a rock is (re)spawned
 function place(m){const a=sRng()*6.283,r=8+sRng()*48,x=P.x+Math.cos(a)*r,z=P.z+Math.sin(a)*r;m.position.set(x,H(x,z)+m.u.r*.5,z);m.u.rest=true;m.u.v.set(0,0,0);m.u.skip=0;if(m.u.fl&&m.position.y<0){m.position.y=0;m.u.rest=false}}
 // SKIP: add skip:0 to rock data
@@ -801,14 +763,6 @@ const motes=new T.Points(mg,new T.PointsMaterial({color:0xfff0b0,size:.12,transp
 const inPit=(x,z)=>{const c=cave(x,z);return !!c&&Math.hypot(x-c.x,z-c.z)<10};
 const inCave=()=>{const c=cave(P.x,P.z);return !!c&&c.t===0&&Math.hypot(P.x-c.x,P.z-c.z)<7&&P.y<c.f+4};
 const handMat=new T.MeshPhongMaterial({color:0xf5cd30,shininess:30,specular:0x444444}),sleeveM=new T.MeshPhongMaterial({color:0x2a8a9a,shininess:12});
-// PUNCH: gold glow while powered — polled every frame, cheap
-let _glowK=0;
-function punchGlow(dt){const want=punchPower&&inGame?1:0;_glowK+=(want-_glowK)*Math.min(1,dt*3);
-  const t=U.uT.value,pulse=.5+.5*Math.sin(t*3.2);
-  me.tor.children[0]&&me.tor.children[0].material&&me.tor.children[0].material.emissive&&me.tor.children[0].material.emissive.setRGB(_glowK*(.9+pulse*.35),_glowK*(.55+pulse*.25),0);
-  if(me.tor.children[0]&&me.tor.children[0].material)me.tor.children[0].material.emissiveIntensity=1;
-  handMat.color.setRGB(1,_glowK>0?.78+_glowK*.15:.80,_glowK>0?.15:.20);
-}
 function mkHand(){const H=new T.Group(),b=new T.Mesh(new T.BoxGeometry(.2,.2,.62),handMat);b.rotation.x=.5;b.position.set(0,-.149,.272);H.add(b);return H}
 const handR=mkHand();cam.add(handR);const holdSocket=new T.Object3D();holdSocket.position.set(0,0,-.2);handR.add(holdSocket);
 const _hp=new T.Vector3(),_hq=new T.Quaternion();
@@ -970,7 +924,6 @@ else if(k==='swing')nz(.18,1200,.22,.8);else if(k==='pick'){nz(.08,2600,.38,2);t
 else if(k==='chop'){nz(.1,500,.45,1);tone(110,.15,'sine',.4,70)}else if(k==='break'){[0,.07,.14].forEach((d,i)=>tone(500*Math.pow(1.26,i+t),.3,'triangle',.24,0,d));nz(.25,700,.32,.6)}
 else if(k==='disc'){[523,659,784,1047].forEach((f,i)=>tone(f,1.4,'sine',.16,0,i*.13))}}
 function grab(){
-  nearCrystal=null;
   let frnd=null, fd=2.5*2.5;
   for(const id in rem){const d=rem[id].root.position.distanceToSquared(P);if(d<fd){fd=d;frnd=id}}
   if(frnd){dragging=frnd;dragT=performance.now();$('gb').textContent='Let go';if(rm)rm.emit('dragging',{to:frnd});addMsg('·','You grabbed '+nameOf(frnd),.35);return}
@@ -1429,7 +1382,7 @@ addEventListener('keydown',e=>{
   if(e.code==='Escape'){closeChat()}
   if(e.code==='KeyV')tp=!tp;
   if(/^Digit[1-7]$/.test(e.code)){emote=[2,3,4,5,6,11,12][+e.code[5]-1];syncBar()}
-  if(e.code==='KeyF'){if(punchPower&&!held&&!dragging)doPunch();else if(rm){if(dragging)stopDrag();else grab()}}
+  if(e.code==='KeyF'&&rm){if(dragging)stopDrag();else grab()}
   if(e.code==='KeyI')toggleInv();if(e.code==='KeyQ')storeHeld();if(e.code==='KeyE'&&bnear>=0)boardBoat(bnear);
   if(e.code==='KeyB'&&rm&&rm.isHost)rm.emit('bringAll',{});
 });
@@ -1460,14 +1413,7 @@ $('jb').onpointerdown=e=>{e.preventDefault();jump=true;try{$('jb').setPointerCap
 $('jb').onpointerup=$('jb').onpointercancel=()=>jump=false;
 $('lb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();leaveBoat()};
 $('rb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();toggleRun()};
-$('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(eatT>=0)return;
-  if(held&&(held.u.kind===6||held.u.kind===0)){eatT=0;eatChomped=0;}
-  else if(!held&&nearCrystal){
-    if(nearCrystal.poi){_pendingPOIEat=nearCrystal.poi;eatT=0;eatChomped=0;sfx('grab');}
-    else{held=nearCrystal;held.u.held=true;held.u.rest=false;eatT=0;eatChomped=0;sfx('grab');}
-  }
-};
-$('pbtn').onpointerdown=e=>{e.preventDefault();e.stopPropagation();doPunch()};
+$('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(held&&held.u.kind===6&&eatT<0){eatT=0;eatChomped=0}};
 const downPtrs=new Set();
 function releasePtr(id){
   downPtrs.delete(id);
@@ -1626,10 +1572,7 @@ holdK+=((held?1:0)-holdK)*Math.min(1,dt*9);handR.position.y+=holdK*.06;handR.rot
 lhG.position.set(-.36-breathX-walkBob,-.27+Math.sin(idle*1.2+1)*.007+Math.cos(bobT*2+1)*.018*spdMag*(1+runK*.5)+(1-lhVis*lhVis*(3-2*lhVis))*-.55+runK*.08,-.55+runK*.02-sw);
 lhG.rotation.set(-.25+Math.sin(idle*1.2+1)*.02-runK*.12+sw*2.2,-.1-Math.cos(idle*.8)*.015,-.15+walkBob*.8);
 dragK+=((dragging?1:0)-dragK)*Math.min(1,dt*8);{const tg=Math.sin(idle*5)*.03*dragK;handR.position.x-=dragK*.12;handR.position.z+=tg;handR.position.y+=dragK*.05;handR.rotation.y-=dragK*.15;lhG.position.x+=dragK*.12;lhG.position.z-=tg;lhG.position.y+=dragK*.05;lhG.rotation.y+=dragK*.15}
-if(punchT>=0){const pp=punchT/.35;const thrust=Math.sin(pp*Math.PI);handR.position.z+=thrust*.28;handR.position.y+=thrust*.10;handR.rotation.x-=thrust*.9;lhG.position.z+=thrust*.20;lhG.rotation.x-=thrust*.7}
-if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.stored=true;held.u.held=false;held.u.rest=false;held.visible=false;if(rm)rm.emit('inv',{i:held.u.idx,on:1});held=null;$('gb').textContent='Grab'}
-            if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===0){held.u.stored=true;held.u.held=false;held.u.rest=false;held.visible=false;if(rm)rm.emit('inv',{i:held.u.idx,on:1});held=null;$('gb').textContent='Grab';punchPower=true;hud('✊ PUNCH unlocked');addMsg('✦','You feel incredibly strong. Walk up to a tree and punch it.',.15)}
-            if(eatT>=EAT_DUR*0.5&&_pendingPOIEat){punchPower=true;hud('✊ PUNCH unlocked');addMsg('✦','You feel incredibly strong. Walk up to a tree and punch it.',.15);window._eatenPOIs.add(_pendingPOIEat.id);if(_pendingPOIEat.gm)_pendingPOIEat.gm.visible=false;_pendingPOIEat=null;}if(eatT>=EAT_DUR)eatT=-1}
+if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-ep)*2;const eb2=eb0*eb0*(3-2*eb0);handR.position.lerp(_eatTarget,eb2);handR.rotation.x=handR.rotation.x*(1-eb2)+(-0.6)*eb2;handR.rotation.y=handR.rotation.y*(1-eb2);handR.rotation.z=handR.rotation.z*(1-eb2)+0.1*eb2;if(eatT>=EAT_DUR*0.5&&held&&held.u.kind===6){held.u.stored=true;held.u.held=false;held.u.rest=false;held.visible=false;if(rm)rm.emit('inv',{i:held.u.idx,on:1});held=null;$('gb').textContent='Grab'}if(eatT>=EAT_DUR)eatT=-1}
 if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompose(_hp,_hq,new T.Vector3());
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
@@ -1694,21 +1637,9 @@ const t=U.uT.value;for(let i=0;i<NB;i++){const a=t*(.12+.02*(i%5))*(i%2?1:-1)+i*
 birds.instanceMatrix.needsUpdate=true;
 for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t*.8+i)*.5;mp[j+1]=P.y+.3+((i*.137+t*.04)%1)*8;mp[j+2]=P.z+Math.cos(i*7.7+t*.06)*15+Math.cos(t*.9+i)*.5}mg.attributes.position.needsUpdate=true;motes.visible=!uw;
 {const ic=inCave();sun.intensity+=((ic?.35:1.1)-sun.intensity)*Math.min(1,dt*3)}
-punchUpdate(dt);punchGlow(dt);poiTick(dt,t);if(fr%6===0)mixAudio(uw);
+poiTick(dt,t);if(fr%6===0)mixAudio(uw);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
-nearCrystal=null;
-if(!held&&!dragging&&myKo<=0&&!inBoat){
-  let bd=625; // 25 units range
-  for(const r of rocks){if(r.u.kind===0&&!r.u.held&&!r.u.remoteHeld&&!r.u.stored){const d=r.position.distanceToSquared(P);if(d<bd){bd=d;nearCrystal=r}}}
-  if(!nearCrystal){
-    for(const g of PM.values()){
-      if(window._eatenPOIs.has(g.id))continue;
-      const d=Math.pow(g.c.x-P.x,2)+Math.pow(g.c.z-P.z,2);
-      if(d<625 && d<bd){bd=d;nearCrystal={poi:g}}
-    }
-  }
-}
-$('ebt').style.display=(((held&&(held.u.kind===6||held.u.kind===0))||(!held&&nearCrystal))&&eatT<0)?'block':'none';
+$('ebt').style.display=(held&&held.u.kind===6&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
 else{$('gb').style.transform=''}
 if(trauma>0){trauma=Math.max(0,trauma-dt*1.4);const s=trauma*trauma,q=t*28;cam.rotation.x+=(vn(q,3.1)-.5)*.1*s;cam.rotation.y+=(vn(q,7.7)-.5)*.1*s;cam.rotation.z+=(vn(q,11.3)-.5)*.16*s;cam.position.x+=(vn(q,1.9)-.5)*.18*s;cam.position.y+=(vn(q,5.3)-.5)*.18*s}
