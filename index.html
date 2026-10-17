@@ -843,7 +843,7 @@ else if(c.t===1){for(let k=0;k<9;k++){const a=k/9*6.283;addCollider(c.x+Math.cos
 else if(c.t===2)addCollider(c.x,c.z,3.3,c.y,ck,17);
 else if(c.t===3){const a=r(1)*3,ca=Math.cos(a),sa=Math.sin(a);for(const o of[-.55,0,.55])addCollider(c.x+ca*o,c.z-sa*o,.6,c.y,ck,8)}
 else{const a=r(2)*3.14,ca=Math.cos(a),sa=Math.sin(a);for(const[o,hh]of[[-4.2,3.2],[-3.2,2],[3.2,2],[4.2,3.2]])addCollider(c.x+ca*o,c.z-sa*o,.6,c.y,ck,hh)}}
-function dropPOI(k){const g=PM.get(k);if(!g)return;if(g.ores)for(const o of g.ores)removeOre(o);clearCollidersByKey('poi_'+k);scene.remove(g);g.traverse(o=>{if(o.isMesh)o.geometry.dispose()});PM.delete(k)}
+function dropPOI(k){const g=PM.get(k);if(!g)return;if(g.ores)for(const o of g.ores)removeOre(o);clearCollidersByKey('poi_'+k);scene.remove(g);g.traverse(o=>{if(o.isMesh)o.geometry.dispose()});PM.delete(k);if(SPACERITUALS.has(k)){if(SPACEPORT&&SPACEPORT.poi===g.c){scene.remove(SPACEPORT.g);SPACEPORT.g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});SPACEPORT=null}SPACERITUALS.delete(k)}}
 function nearPOI(rad){let b=null,bd=rad;for(const g of PM.values()){const d=Math.hypot(g.c.x-P.x,g.c.z-P.z);if(d<bd){bd=d;b=g.c}}return b}
 function ask(c){const q=QS[c.t][Math.random()*3|0],n=poiName(c);sfx('disc');addMsg('·',n+': '+q,.1);if(rm)rm.emit('chat',{t:'✦ '+n+': '+q,h:me.hu,n:uname||''})}
 let bt=0;
@@ -852,7 +852,7 @@ function discover(c){disc.add(c.id);showBanner(c);ask(c);if(rm)rm.emit('disc',{i
 function poiTick(dt,t){if(fr%12===0){const ix=Math.floor(P.x/CL),iz=Math.floor(P.z/CL);let n=0;
 for(let a=-3;a<=3;a++)for(let b=-3;b<=3;b++){const c=cave((ix+a+.5)*CL,(iz+b+.5)*CL);if(c&&n<2&&!PM.has(c.id)){buildPOI(c);n++}}
 for(const[k,g]of PM){if(Math.abs(g.c.x-P.x)>CL*5||Math.abs(g.c.z-P.z)>CL*5)dropPOI(k);else if(!disc.has(k)&&Math.hypot(g.c.x-P.x,g.c.z-P.z)<(g.c.t?11:7))discover(g.c)}}
-for(const g of PM.values())if(g.gm){g.gm.rotation.y+=dt*g.spin;if(g.c.t===3)g.gm.position.y=Math.sin(t*.9)*.3}for(const L of lhPool){const b=L.userData.beam;if(b){b.rotation.y=t*0.9}}}
+for(const g of PM.values())if(g.gm){g.gm.rotation.y+=dt*g.spin;if(g.c.t===3)g.gm.position.y=Math.sin(t*.9)*.3}for(const L of lhPool){const b=L.userData.beam;if(b){b.rotation.y=t*0.9}}if(fr%20===0&&!DIMON&&!SPACEON&&!SPACEFALLING)spaceRitualTick()}
 function regen(q,keepPos){
   const kx=P.x,kz=P.z;
   setSeed(q);
@@ -862,6 +862,9 @@ function regen(q,keepPos){
   lhPool.length=0;
   for(const p of padPool)scene.remove(p);
   padPool.length=0;
+  if(SPACEPORT){scene.remove(SPACEPORT.g);SPACEPORT.g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});SPACEPORT=null}
+  SPACERITUALS.clear();
+  if(SPACEON||SPACEFALLING>0){SPACEON=0;SPACEFALLING=0;SPACEFALLT=0;if(SPACEGROUP)SPACEGROUP.visible=false;skyM.visible=true;water.visible=true;$('ov').style.opacity=0;$('ov').style.background='radial-gradient(circle,#1b7d93aa,#0a3f55dd)'}
   if(keepPos){P.x=kx;P.z=kz;} else spawn();
   P.v.set(0,0,0);
   for(const c of pool)c.cx=1e9;
@@ -1218,17 +1221,196 @@ function closePortal(mine){if(!PORT)return false;if(PC||PCL){if(mine)hud('Not no
  PCL={t0:performance.now(),dur:1100,p:PORT,mine,ring:null};PORT.ps=-1;sfx('whoosh');if(!BURST)mkBurst(PORT.x,PORT.y,PORT.z,PORT.a,DD[PORT.d].col);
  if(DIMON&&!mine)hud('Portal closed - the gate still leads home');
  if(mine){$('dimp').style.display='none';if(rm)rm.emit('dimc',{})}return true}
+
+// ============ SPACE / MOON GATE RITUAL ============
+let SPACEON=0,SPACEFALLING=0,SPACEFALLT=0,SPACEPORT=null,SPACERET=null,SPACEEARTH=null,SPACEPLAT=null,SPACESTARS=null,SPACEGROUP=null;
+const SPACEY=600,SPACERITUALS=new Map();
+
+function buildSpaceScene(){
+  if(SPACEGROUP)return;
+  const G=new T.Group();
+  G.position.set(0,SPACEY,0);
+  const earthGeo=new T.SphereGeometry(200,48,32);
+  const earthMat=new T.ShaderMaterial({
+    uniforms:{uT:U.uT},
+    vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'varying vec3 vP;uniform float uT;float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1,0)),f.x),mix(hs(i+vec2(0,1)),hs(i+vec2(1)),f.x),f.y);}void main(){vec3 d=normalize(vP);float lat=asin(clamp(d.y,-1.,1.));float lon=atan(d.z,d.x);float n=vn(vec2(lon*2.2,lat*3.5)+vec2(3.1,7.2));float land=smoothstep(.5,.58,n);vec3 ocean=mix(vec3(.03,.18,.42),vec3(.1,.32,.6),vn(vec2(lon*3.,lat*3.)));vec3 ground=mix(vec3(.1,.35,.12),vec3(.38,.32,.2),vn(vec2(lon*8.,lat*8.)));ground=mix(ground,vec3(.85,.85,.9),smoothstep(.65,.8,vn(vec2(lon*5.+11.,lat*5.))));vec3 c=mix(ocean,ground,land);float cl=vn(vec2(lon*3.5+uT*.01,lat*3.5));c=mix(c,vec3(.92,.94,.97),smoothstep(.55,.72,cl)*.55);float sun=max(dot(d,normalize(vec3(.6,.5,.45))),0.);c*=0.28+0.72*pow(sun,.6);float rim=pow(1.-max(-d.z,0.),3.);c+=vec3(.35,.55,1.)*rim*.5;gl_FragColor=vec4(c,1.);gl_FragColor=linearToOutputTexel(gl_FragColor);}'
+  });
+  SPACEEARTH=new T.Mesh(earthGeo,earthMat);
+  SPACEEARTH.position.set(0,-580,0);
+  G.add(SPACEEARTH);
+  SPACEPLAT=new T.Mesh(new T.CylinderGeometry(18,19,2,40),new T.MeshLambertMaterial({color:0x556070,emissive:0x1a2230,emissiveIntensity:.6}));
+  SPACEPLAT.position.set(0,-1,0);
+  G.add(SPACEPLAT);
+  const rim=new T.Mesh(new T.TorusGeometry(18.6,.32,8,48).rotateX(Math.PI/2),new T.MeshBasicMaterial({color:0x66ddff}));
+  rim.position.set(0,0,0);G.add(rim);
+  const emb=new T.Mesh(new T.CircleGeometry(2.4,32).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0x44ffaa,transparent:true,opacity:.4}));
+  emb.position.set(0,.01,0);G.add(emb);
+  const N=900,pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){const a=Math.random()*6.2832,b=Math.acos(Math.random()*2-1),r=700+Math.random()*800;pos[i*3]=Math.sin(b)*Math.cos(a)*r;pos[i*3+1]=Math.cos(b)*r;pos[i*3+2]=Math.sin(b)*Math.sin(a)*r}
+  const sg=new T.BufferGeometry();sg.setAttribute('position',new T.BufferAttribute(pos,3));
+  SPACESTARS=new T.Points(sg,new T.PointsMaterial({color:0xffffff,size:1.4,sizeAttenuation:true,transparent:true,opacity:.9,depthWrite:false}));
+  SPACESTARS.frustumCulled=false;G.add(SPACESTARS);
+  G.visible=false;scene.add(G);SPACEGROUP=G;
+}
+
+function mkSpacePortal(poi){
+  const a=Math.atan2(P.x-poi.x,P.z-poi.z)+Math.PI*.4;
+  const d=9;
+  const x=poi.x+Math.sin(a)*d,z=poi.z+Math.cos(a)*d;
+  const y=Math.max(H(x,z),H(x+1.2,z),H(x-1.2,z),H(x,z+1.2),H(x,z-1.2))+.05;
+  const g=new T.Group();
+  g.position.set(x,y,z);g.rotation.y=a;
+  const fm=new T.MeshBasicMaterial({color:0x66ffaa});
+  const mkBar=(w,h,ox,oy)=>{const m=new T.Mesh(new T.BoxGeometry(w,h,.25),fm);m.position.set(ox,oy,0);g.add(m)};
+  mkBar(.14,3.4,-1.7,1.7);mkBar(.14,3.4,1.7,1.7);mkBar(3.54,.14,0,3.4);mkBar(3.54,.14,0,0);
+  const surf=new T.Mesh(new T.PlaneGeometry(3.4,3.4),new T.ShaderMaterial({
+    transparent:true,side:T.DoubleSide,depthWrite:false,
+    uniforms:{uT:U.uT},
+    vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'varying vec2 vUv;uniform float uT;float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1,0)),f.x),mix(hs(i+vec2(0,1)),hs(i+vec2(1)),f.x),f.y);}void main(){vec2 c=vUv-.5;float r=length(c);float fz=vn(vUv*7.+vec2(uT*1.5,uT*1.1))*.55+vn(vUv*17.-uT*2.3)*.45;float edge=smoothstep(.5,.42,r);vec3 col=mix(vec3(.08,1.,.4),vec3(.85,1.,.5),fz);float al=edge*(.55+.45*fz);col+=vec3(.4,1.,.3)*fz*.6;gl_FragColor=vec4(col,al);gl_FragColor=linearToOutputTexel(gl_FragColor);}'
+  }));
+  surf.position.set(0,1.7,.01);g.add(surf);
+  const glow=new T.Sprite(new T.SpriteMaterial({map:halo,color:0x44ff88,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.55}));
+  glow.position.set(0,1.7,.15);glow.scale.set(5,5,1);g.add(glow);
+  const bm=mkBeam(0x44ff88,10,.14);bm.position.y=.2;g.add(bm);
+  scene.add(g);
+  return{x,y,z,a,g,poi,gy:y};
+}
+
+function spaceRitualTick(){
+  for(const[k,g]of PM){
+    if(g.c.t!==4)continue;
+    if(SPACERITUALS.has(k))continue;
+    let burgers=0,stones=0;
+    const r2=144;
+    for(const r of rocks){
+      if(r.u.held||r.u.remoteHeld||r.u.stored||r.u.big)continue;
+      if(!r.u.rest)continue;
+      const dx=r.position.x-g.c.x,dz=r.position.z-g.c.z;
+      if(dx*dx+dz*dz>r2)continue;
+      if(r.u.kind===6)burgers++;
+      else if(r.u.kind===8)stones++;
+    }
+    if(burgers>=2&&stones>=1){
+      SPACEPORT=mkSpacePortal(g.c);
+      SPACERITUALS.set(k,1);
+      sfx('disc');shake(.18);
+      ripple(SPACEPORT.x,SPACEPORT.z,1.4);
+      const e=$('bn');
+      if(e){e.innerHTML='<small>ritual</small>a green portal opens';e.classList.add('on');clearTimeout(bt);bt=setTimeout(()=>e.classList.remove('on'),4600)}
+      addMsg('✦','a green fizzling portal opens near the moon gate',1.0);
+      break;
+    }
+  }
+}
+
+function enterSpace(){
+  if(SPACEON||SPACEFALLING>0)return;
+  SPACERET={x:P.x,y:P.y,z:P.z,ya:ya};
+  SPACEON=1;
+  if(SPACEPORT){scene.remove(SPACEPORT.g);SPACEPORT.g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});SPACEPORT=null}
+  buildSpaceScene();
+  SPACEGROUP.visible=true;
+  P.set(0,SPACEY,0);P.v.set(0,0,0);byaw=ya;
+  for(const r of rocks)if(!r.u.held)r.visible=false;
+  for(const o of activeOres){o.m.visible=false;o.sp.visible=false}
+  birds.visible=false;motes.visible=false;water.visible=false;
+  for(const L of lhPool)L.visible=false;
+  for(const p of padPool)p.visible=false;
+  for(const g of PM.values())g.visible=false;
+  skyM.visible=false;
+  fogC.set(0x02030a);scene.fog.density=0.0001;
+  $('ov').style.opacity=0;
+  flash();
+  addMsg('·','You step through the portal into the void',.3);
+}
+
+function landFromSpace(){
+  SPACEON=0;SPACEFALLING=0;SPACEFALLT=0;
+  if(SPACEGROUP)SPACEGROUP.visible=false;
+  skyM.visible=true;water.visible=true;
+  fogC.copy(FOG0);scene.fog.density=.014;
+  $('ov').style.opacity=0;$('ov').style.background='radial-gradient(circle,#1b7d93aa,#0a3f55dd)';
+  for(const o of activeOres){o.m.visible=true;o.sp.visible=true}
+  birds.visible=true;motes.visible=true;
+  for(const L of lhPool)L.visible=true;
+  for(const p of padPool)p.visible=true;
+  for(const g of PM.values())g.visible=true;
+  const R=SPACERET||{x:0,y:0,z:0,ya:0};
+  const th=H(R.x,R.z);
+  P.set(R.x,Math.max(R.y+30,th+45),R.z);
+  P.v.set(0,-8,0);
+  ya=R.ya||0;
+  chunks(true);
+  flash();
+  addMsg('·','You crash through the atmosphere',.3);
+}
+
+function spaceTick(dt){
+  const t=U.uT.value;
+  const ix=cutT>0?0:Math.max(-1,Math.min(1,mv.x+(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)));
+  const iy=cutT>0?0:Math.max(-1,Math.min(1,mv.y+(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)));
+  const sy=Math.sin(ya),cy=Math.cos(ya);
+  if(SPACEFALLING>0){
+    SPACEFALLT+=dt;
+    P.v.y-=25*dt;if(P.v.y<-22)P.v.y=-22;
+    P.y+=P.v.y*dt;P.v.x*=1-2*dt;P.v.z*=1-2*dt;
+    P.x+=P.v.x*dt;P.z+=P.v.z*dt;
+    cam.position.set(P.x,P.y+1.6,P.z);cam.rotation.set(pt,ya,0);
+    cam.getWorldDirection(fw);rt.set(Math.cos(ya),0,-Math.sin(ya));
+    const p=Math.min(1,SPACEFALLT/3);
+    $('ov').style.opacity=Math.min(.88,p*1.1);
+    $('ov').style.background='radial-gradient(circle,rgba(255,190,90,'+(0.55+p*0.3)+'),rgba(255,55,15,'+(0.7+p*0.25)+'))';
+    me.root.visible=true;me.hd.visible=false;me.aR.visible=me.aL.visible=true;
+    me.root.position.set(P.x,P.y,P.z);me.root.rotation.y=ya+Math.PI;byaw=ya+Math.PI;
+    dirAnim(me,P.v.x,P.v.z,byaw,dt);
+    ph+=dt*6;
+    pose(me,t,ph,1,8,false,0,false);
+    net(dt,t,1,8);
+    if(SPACEFALLT>3.2)landFromSpace();
+    return;
+  }
+  const sp=5.2,tx=(-sy*iy+cy*ix)*sp,tz=(-cy*iy-sy*ix)*sp;
+  const k=Math.min(1,dt*10);
+  P.v.x+=(tx-P.v.x)*k;P.v.z+=(tz-P.v.z)*k;
+  P.x+=P.v.x*dt;P.z+=P.v.z*dt;
+  P.v.y-=18*dt;P.y+=P.v.y*dt;
+  const rad=Math.hypot(P.x,P.z);
+  if(rad>17.5||P.y<SPACEY-2){
+    SPACEFALLING=1;SPACEFALLT=0;
+    if(held){const u=held.u;u.held=false;u.remoteHeld=null;u.rest=false;if(rm)rm.emit('thr',{i:u.idx,p:held.position.toArray().map(x=>+x.toFixed(2)),v:[0,0,0]});held=null;$('gb').textContent='Grab'}
+    sfx('whoosh');
+    return;
+  }
+  if(P.y<=SPACEY){P.y=SPACEY;P.v.y=0;if(jump){sfx('jump');P.v.y=7.0}}
+  cam.position.set(P.x,P.y+1.6,P.z);cam.rotation.set(pt,ya,0);
+  cam.getWorldDirection(fw);rt.set(Math.cos(ya),0,-Math.sin(ya));
+  const spd=Math.min(1.55,Math.hypot(P.v.x,P.v.z)/5.2);
+  ph+=dt*spd*9;
+  const air=P.y>SPACEY+.35;
+  let mdl=air?(P.v.y>0?7:8):0;
+  const tg=spd>.15?Math.atan2(P.v.x,P.v.z):ya+Math.PI;
+  byaw+=Math.atan2(Math.sin(tg-byaw),Math.cos(tg-byaw))*Math.min(1,dt*10);
+  dirAnim(me,P.v.x,P.v.z,byaw,dt);
+  me.root.visible=true;me.hd.visible=tp||emote>0;me.aR.visible=me.aL.visible=true;
+  me.root.position.set(P.x,P.y,P.z);me.root.rotation.y=byaw;
+  pose(me,t,ph,spd,mdl,!!held,0,runToggle&&spd>.15);
+  net(dt,t,spd,mdl);
+  if(fr%30===0)hud('in space');
+}
+
 let _dcS=-1;function dimBtnSync(){const b=$('dimc');if(!b)return;const s=PORT&&!PC&&!PCL?1:0;if(s===_dcS)return;_dcS=s;b.disabled=!s;b.style.opacity=s?1:.4}
 function mkBurst(x,y,z,a,col){const n=70,pos=new Float32Array(n*3),vel=[],life=[],g=new T.BufferGeometry();for(let i=0;i<n;i++){vel.push(new T.Vector3());life.push(Math.random()*1.2);pos[i*3+1]=-1e4}
  g.setAttribute('position',new T.BufferAttribute(pos,3));const pts=new T.Points(g,new T.PointsMaterial({size:.17,color:col,transparent:true,depthWrite:false,blending:T.AdditiveBlending}));pts.frustumCulled=false;scene.add(pts);BURST={pts,pos,vel,life,x,y,z,a,emit:true,n}}
 function burstTick(dt){const B=BURST;if(!B)return;let alive=0;for(let i=0;i<B.n;i++){B.life[i]-=dt;if(B.life[i]<=0){if(B.emit){const lx=(Math.random()-.5)*3.4;B.pos[i*3]=B.x+Math.cos(B.a)*lx;B.pos[i*3+1]=B.y+.1;B.pos[i*3+2]=B.z-Math.sin(B.a)*lx;B.vel[i].set((Math.random()-.5)*1.2+Math.sin(B.a)*Math.random()*2,1.5+Math.random()*4,(Math.random()-.5)*1.2+Math.cos(B.a)*Math.random()*2);B.life[i]=.8+Math.random()}else B.pos[i*3+1]=-1e4}else{alive++;B.vel[i].y-=2.5*dt;B.pos[i*3]+=B.vel[i].x*dt;B.pos[i*3+1]+=B.vel[i].y*dt;B.pos[i*3+2]+=B.vel[i].z*dt}}
  B.pts.geometry.attributes.position.needsUpdate=true;if(!B.emit&&!alive){scene.remove(B.pts);B.pts.geometry.dispose();B.pts.material.dispose();BURST=null}}
-function openPortal(who,d,x,z,a,mine){if(PC||!(d>=0&&d<DD.length))return;if(!DG[d])DG[d]=buildDimension(d);const B=mine?me:(rem[who]&&rem[who].body);
+function openPortal(who,d,x,z,a,mine){if(PC||SPACEON||SPACEFALLING>0||!(d>=0&&d<DD.length))return;if(!DG[d])DG[d]=buildDimension(d);const B=mine?me:(rem[who]&&rem[who].body);
  PC={who,B,d,x,z,a,t0:performance.now(),dur:6800,mine,made:false};
  if(mine){cutT=6.8;tpSave=tp;tp=true;emote=0;syncBar();byaw=ya;$('bars').classList.add('on');if(held)toss(0)}sfx('boing')}
 function portalSpotOk(x,z){let lo=1e9,hi=-1e9;for(let i=0;i<9;i++){const u=i?Math.cos(i*.785)*1.6:0,v=i?Math.sin(i*.785)*1.6:0,h=H(x+u,z+v);if(h<-.3||inPit(x+u,z+v))return false;lo=Math.min(lo,h);hi=Math.max(hi,h)}
 if(hi-lo>1.1)return false;for(const c of colliders){if(hi<c.y-.6||lo>c.y+(c.h||4))continue;const r=c.r+1.7;if((x-c.x)**2+(z-c.z)**2<r*r)return false}return true}
-function reqPortal(d){if(!inGame||PC||DIMON||myKo>0||inBoat||cutT>0){hud(DIMON?'Return through the gate first':'Not now');return}
+function reqPortal(d){if(!inGame||PC||DIMON||myKo>0||inBoat||cutT>0||SPACEON||SPACEFALLING>0){hud(DIMON?'Return through the gate first':'Not now');return}
  const a=Math.atan2(Math.sin(ya),Math.cos(ya));if(P.y>H(P.x,P.z)+1.2){hud('Land first');return}
  let x=0,z=0,ok=0;for(const dist of[2.8,3.8,4.8]){for(const off of[0,.55,-.55]){const aa=ya+off,cx=P.x-Math.sin(aa)*dist,cz=P.z-Math.cos(aa)*dist;if(portalSpotOk(cx,cz)){x=cx;z=cz;ok=1;break}}if(ok)break}
  if(!ok){hud('No flat dry space here');return}
@@ -1446,7 +1628,8 @@ const sy=Math.sin(ya),cy=Math.cos(ya),g=H(P.x,P.z);
 const swim=!inBoat&&g<-0.6&&P.y<1.0;
 const k=Math.min(1,dt*(swim?4:10));
 running = runToggle && !inBoat && !swim && !dragging;
-if(myKo>0){P.v.y-=18*dt;P.y+=P.v.y*dt;const gg=H(P.x,P.z);if(P.y<=gg){P.y=gg;P.v.y=0}
+if(SPACEPORT&&!SPACEON&&!SPACEFALLING&&cutT<=0){const dx=P.x-SPACEPORT.x,dz=P.z-SPACEPORT.z,sa=Math.sin(SPACEPORT.a),ca=Math.cos(SPACEPORT.a),s=dx*sa+dz*ca,u=dx*ca-dz*sa,hy=P.y-SPACEPORT.y;if(s<=0&&s>-1.5&&Math.abs(u)<1.9&&hy>-1&&hy<3.6)enterSpace()}
+if(SPACEON){spaceTick(dt)}else if(myKo>0){P.v.y-=18*dt;P.y+=P.v.y*dt;const gg=H(P.x,P.z);if(P.y<=gg){P.y=gg;P.v.y=0}
   P.v.x*=1-3*dt;P.v.z*=1-3*dt;P.x+=P.v.x*dt;P.z+=P.v.z*dt;resolvePointCollisions(P,P.y,0.4);
   const E2=x=>x*x*(3-2*x),fall=myKo>1.65?E2((2-myKo)/.35):myKo<.6?E2(myKo/.6):1;cam.position.set(P.x,P.y+1.6-fall*1.0,P.z);cam.rotation.set(pt+fall*0.9,ya,0);
   me.root.visible=true;me.hd.visible=true;me.root.position.set(P.x,P.y,P.z);me.root.rotation.y=byaw;
@@ -1544,9 +1727,10 @@ else{
   const runFlag=running && !swim && !air && mdl===0 && spd>0.15;
   dirAnim(me,P.v.x,P.v.z,byaw,dt);{const rel=Math.atan2(Math.sin(ya+Math.PI-byaw),Math.cos(ya+Math.PI-byaw)),kk=Math.min(1,dt*10);me.hy=(me.hy||0)+(Math.max(-1.1,Math.min(1.1,rel))-(me.hy||0))*kk;me.hx=(me.hx||0)+(Math.max(-.7,Math.min(.7,-pt*.8))-(me.hx||0))*kk}
   pose(me,U.uT.value,ph,spd,mdl,!!held,0,runFlag);net(dt,U.uT.value,spd,mdl);if(fr%30===0)hud()}
-if((tp||emote>0)&&myKo<=0&&!pulledBy){cam.position.addScaledVector(fw,-3.4).addScaledVector(rt,.5);cam.position.y=Math.max(cam.position.y,H(cam.position.x,cam.position.z)+.4)}
-const uw=cam.position.y<0;if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
-if(!uw)fogC.copy(FOG0);
+const uw=cam.position.y<0;
+if(!SPACEON){if((tp||emote>0)&&myKo<=0&&!pulledBy){cam.position.addScaledVector(fw,-3.4).addScaledVector(rt,.5);cam.position.y=Math.max(cam.position.y,H(cam.position.x,cam.position.z)+.4)}
+if(uw!==wasUw){wasUw=uw;fogC.set(uw?0x0c4a5e:0xb9cfe6);scene.fog.density=wU.uFd.value=uw?.075:.014;$('ov').style.opacity=uw?1:0}
+if(!uw)fogC.copy(FOG0);}
 const wantHand=!tp && emote===0 && myKo<=0 && !inBoat && (!!held||!!dragging||eatT>=0);
 handVis+=((wantHand?1:0)-handVis)*Math.min(1,dt*7);
 handR.visible=handVis>0.02;lhVis+=(((wantHand&&dragging)?1:0)-lhVis)*Math.min(1,dt*7);lhG.visible=handR.visible&&lhVis>.02;
@@ -1565,6 +1749,7 @@ if(eatT>=0){eatT+=dt;const ep=Math.min(1,eatT/EAT_DUR);const eb0=ep<0.5?ep*2:(1-
 if(held){holdSocket.updateWorldMatrix(true,false);holdSocket.matrixWorld.decompose(_hp,_hq,new T.Vector3());
 if(lastHeld!==held){lastHeld=held;pulling=1}
 if(pulling){const kk=Math.min(1,dt*11);held.position.lerp(_hp,kk);held.quaternion.slerp(_hq,kk);if(held.position.distanceToSquared(_hp)<.002)pulling=0}else{held.position.copy(_hp);held.quaternion.copy(_hq)}}}
+if(SPACEON){rd.render(scene,cam);return}
 skyM.position.copy(cam.position);water.position.set(P.x,0,P.z);
 sun.target.position.set(Math.round(P.x/2)*2,0,Math.round(P.z/2)*2);sun.position.copy(sun.target.position).addScaledVector(SUN,90);
 if(!DIMON)chunks(false);portalTick(dt);if(fr%4===0)rd.shadowMap.needsUpdate=true;
