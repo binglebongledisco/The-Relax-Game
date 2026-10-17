@@ -706,7 +706,7 @@ function leaveBoat(){if(!inBoat)return;
 const rg=(()=>{const g=new T.IcosahedronGeometry(1,2),p=g.attributes.position.array,C=[];for(let i=0;i<p.length;i+=3){const n=hs(p[i]*3.1,p[i+2]*2.7+p[i+1]*1.9),m=hs(p[i]*9,p[i+1]*8+p[i+2]*7),q=1+.38*(n-.5)+.09*(m-.5),yy=p[i+1];p[i]*=q;p[i+1]*=q*(yy<0?.75:1);p[i+2]*=q;const v=.72+.4*n+.1*m+.12*Math.max(0,p[i+1]);C.push(v,v,v*.98)}g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();return g})();
 const rms=[0x6a675f,0x7a6e5a,0x555a5e].map(c=>new T.MeshLambertMaterial({color:c,vertexColors:true})),rocks=[];let held=null,eatT=-1,eatChomped=0;const EAT_DUR=1.1;const _eatTarget=new V3(0,-.10,-.15);
 // PUNCH: ability state, craters, tumbling trees
-let punchPower=false,punchT=-1,punchCd=0;
+let punchPower=false,punchT=-1,punchCd=0,nearCrystal=null;
 const craters=[],fallingTrees=[];
 const craterMat=new T.MeshBasicMaterial({color:0x1a120a,transparent:true,opacity:.72,depthWrite:false,side:T.DoubleSide});
 function mkCrater(x,z,y){const g=new T.Mesh(new T.CircleGeometry(.6+Math.random()*.15,20).rotateX(-Math.PI/2),craterMat.clone());g.position.set(x,y+.04,z);g.renderOrder=1;scene.add(g);craters.push({m:g,t:0,life:30});return g}
@@ -970,6 +970,7 @@ else if(k==='swing')nz(.18,1200,.22,.8);else if(k==='pick'){nz(.08,2600,.38,2);t
 else if(k==='chop'){nz(.1,500,.45,1);tone(110,.15,'sine',.4,70)}else if(k==='break'){[0,.07,.14].forEach((d,i)=>tone(500*Math.pow(1.26,i+t),.3,'triangle',.24,0,d));nz(.25,700,.32,.6)}
 else if(k==='disc'){[523,659,784,1047].forEach((f,i)=>tone(f,1.4,'sine',.16,0,i*.13))}}
 function grab(){
+  nearCrystal=null;
   let frnd=null, fd=2.5*2.5;
   for(const id in rem){const d=rem[id].root.position.distanceToSquared(P);if(d<fd){fd=d;frnd=id}}
   if(frnd){dragging=frnd;dragT=performance.now();$('gb').textContent='Let go';if(rm)rm.emit('dragging',{to:frnd});addMsg('·','You grabbed '+nameOf(frnd),.35);return}
@@ -1459,7 +1460,10 @@ $('jb').onpointerdown=e=>{e.preventDefault();jump=true;try{$('jb').setPointerCap
 $('jb').onpointerup=$('jb').onpointercancel=()=>jump=false;
 $('lb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();leaveBoat()};
 $('rb').onpointerdown=e=>{e.preventDefault();e.stopPropagation();toggleRun()};
-$('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(held&&(held.u.kind===6||held.u.kind===0)&&eatT<0){eatT=0;eatChomped=0}};
+$('ebt').onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(eatT>=0)return;
+  if(held&&(held.u.kind===6||held.u.kind===0)){eatT=0;eatChomped=0;}
+  else if(!held&&nearCrystal){held=nearCrystal;held.u.held=true;held.u.rest=false;eatT=0;eatChomped=0;sfx('grab');}
+};
 $('pbtn').onpointerdown=e=>{e.preventDefault();e.stopPropagation();doPunch()};
 const downPtrs=new Set();
 function releasePtr(id){
@@ -1688,7 +1692,9 @@ for(let i=0;i<NM;i++){const j=i*3;mp[j]=P.x+Math.sin(i*12.9+t*.07)*15+Math.sin(t
 {const ic=inCave();sun.intensity+=((ic?.35:1.1)-sun.intensity)*Math.min(1,dt*3)}
 punchUpdate(dt);punchGlow(dt);poiTick(dt,t);if(fr%6===0)mixAudio(uw);
 if(!inBoat && fr%8===0&&!held&&!dragging&&myKo<=0)$('gb').textContent=nearestOre(3.4)?'Mine':'Grab';
-$('ebt').style.display=(held&&(held.u.kind===6||held.u.kind===0)&&eatT<0)?'block':'none';
+nearCrystal=null;
+if(!held&&!dragging&&myKo<=0&&!inBoat){let bd=16;for(const r of rocks){if(r.u.kind===0&&!r.u.held&&!r.u.remoteHeld&&!r.u.stored){const d=r.position.distanceToSquared(P);if(d<bd){bd=d;nearCrystal=r}}}}
+$('ebt').style.display=(((held&&(held.u.kind===6||held.u.kind===0))||(!held&&nearCrystal))&&eatT<0)?'block':'none';
 if(held&&gt){const c=Math.min((performance.now()-gt)/800,1);$('gb').style.transform=`scale(${1+c*.15})`}
 else{$('gb').style.transform=''}
 if(trauma>0){trauma=Math.max(0,trauma-dt*1.4);const s=trauma*trauma,q=t*28;cam.rotation.x+=(vn(q,3.1)-.5)*.1*s;cam.rotation.y+=(vn(q,7.7)-.5)*.1*s;cam.rotation.z+=(vn(q,11.3)-.5)*.16*s;cam.position.x+=(vn(q,1.9)-.5)*.18*s;cam.position.y+=(vn(q,5.3)-.5)*.18*s}
