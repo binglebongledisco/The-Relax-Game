@@ -434,6 +434,7 @@ function applyDayNight(){
  hemi.color.setHex(NIGHT?0x3a4a80:0xbfd8ff);hemi.groundColor.setHex(NIGHT?0x101828:0x7a4a6a);hemi.intensity=NIGHT?0.35:0.85;
  if(NIGHT)FOG0.setHex(0x0b1826);else FOG0.setHex(0xb9cfe6);
  if(!DIMON)fogC.copy(FOG0);
+ if(typeof lhPool!=='undefined')for(const L of lhPool){if(L.userData.light){L.userData.light.intensity=NIGHT?3:0;L.userData.light.visible=NIGHT}if(L.userData.beam)L.userData.beam.material.opacity=NIGHT?.22:.08;if(L.userData.halo)L.userData.halo.material.opacity=NIGHT?.85:.55}
 }
 try{NIGHT=localStorage.getItem('rlx-night')==='1'}catch(_){}
 var _dnb=$('daynightbtn');if(_dnb)_dnb.onpointerdown=function(e){if(e){e.preventDefault();e.stopPropagation()}NIGHT=!NIGHT;try{localStorage.setItem('rlx-night',NIGHT?'1':'0')}catch(_){}applyDayNight()};
@@ -633,10 +634,13 @@ function trySpawnLighthouse(ox,oz){const gx=Math.floor(ox/LH_CELL),gz=Math.floor
   const gk=gx+','+gz;for(const L of lhPool)if(L.userData.gk===gk)return;
   const cx=site.x,cz=site.z;const g=new T.Group();g.position.set(cx,0,cz);
   const lm=new T.Mesh(lighthouseG,lighthouseM);lm.castShadow=true;g.add(lm);
-  const sp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0xffe088,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:.55}));
-  sp.position.set(0,39.3,0);sp.scale.set(4.5,4.5,1);g.add(sp);
-  const beam=new T.Mesh(new T.CylinderGeometry(2.0,2.8,60,12,1,true).rotateX(Math.PI/2).translate(0,0,30),new T.MeshBasicMaterial({color:0xfff0b0,transparent:true,opacity:.08,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,fog:false}));
+  const isN=typeof NIGHT!=='undefined'&&NIGHT;
+  const sp=new T.Sprite(new T.SpriteMaterial({map:halo,color:0xffe088,blending:T.AdditiveBlending,depthWrite:false,transparent:true,fog:false,opacity:isN?.85:.55}));
+  sp.position.set(0,39.3,0);sp.scale.set(4.5,4.5,1);g.add(sp);g.userData.halo=sp;
+  const beam=new T.Mesh(new T.CylinderGeometry(2.0,2.8,60,12,1,true).rotateX(Math.PI/2).translate(0,0,30),new T.MeshBasicMaterial({color:0xfff0b0,transparent:true,opacity:isN?.22:.08,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,fog:false}));
   beam.position.set(0,39.3,0);g.add(beam);g.userData.beam=beam;
+  const pl=new T.PointLight(0xffe088,isN?3:0,80,1.5);
+  pl.position.set(0,39.3,0);pl.visible=isN;g.add(pl);g.userData.light=pl;
   scene.add(g);lhPool.push(g);g.userData.gk=gk;g.userData.colKey='lh_'+gk;
   addCollider(cx,cz,5.2,H(cx,cz),g.userData.colKey,46);
   if(lhPool.length>LH_MAX){let far=-1,fi=-1;for(let i=0;i<lhPool.length;i++){const L=lhPool[i];const d2=(L.position.x-P.x)*(L.position.x-P.x)+(L.position.z-P.z)*(L.position.z-P.z);if(d2>far){far=d2;fi=i}}if(fi>=0){const L=lhPool[fi];if(L.userData.colKey)clearCollidersByKey(L.userData.colKey);scene.remove(L);lhPool.splice(fi,1)}}}
