@@ -414,7 +414,7 @@ let REFLECT=true,PMAX=pm;
 function loadSet(){try{const s=JSON.parse(localStorage.getItem('rlx-settings')||'{}');for(const k in SET)if(k in s&&typeof s[k]===typeof SET[k])SET[k]=s[k]}catch(e){}}
 function saveSet(){try{localStorage.setItem('rlx-settings',JSON.stringify(SET))}catch(e){}}
 function applySettings(){
- pr=PERF?0.75:Math.min(devicePixelRatio||1,SET.pr);PMAX=PERF?0.75:Math.min(pm,SET.pr);
+ pr=PERF?0.65:Math.min(devicePixelRatio||1,SET.pr);PMAX=PERF?0.65:Math.min(pm,SET.pr);
  cam.fov=SET.fov;rs();
  rd.shadowMap.enabled=!PERF&&SET.shadows;if(rd.shadowMap.enabled)rd.shadowMap.needsUpdate=true;
  if(aG)aG.gain.value=muted?0:(MASTER*SET.master);
@@ -638,7 +638,7 @@ function fill(c,cx,cz){
     dm.position.set(x,h-.15,z);dm.rotation.set((rnd()-.5)*.08,ry,(rnd()-.5)*.08);dm.scale.setScalar(sc);dm.updateMatrix();c.tr.setMatrixAt(n,dm.matrix);c.tr.setColorAt(n++,TC[rnd()*7|0]);
     addCollider(x,z,0.45*sc,h,ck,4.6*sc)}
   c.tr.count=n;c.tr.instanceMatrix.needsUpdate=true;if(c.tr.instanceColor)c.tr.instanceColor.needsUpdate=true;n=0;
-  for(let t=0;t<MG;t++){const x=ox+(rnd()-.5)*CS,z=oz+(rnd()-.5)*CS,h=H(x,z),sc=.8+rnd()*.9,ry=rnd()*6.3;if(h<.45||h>18||slope(x,z,h)>.5)continue;
+  for(let t=0;t<(PERF?70:MG);t++){const x=ox+(rnd()-.5)*CS,z=oz+(rnd()-.5)*CS,h=H(x,z),sc=.8+rnd()*.9,ry=rnd()*6.3;if(h<.45||h>18||slope(x,z,h)>.5)continue;
     dm.position.set(x,h-.03,z);dm.rotation.set(0,ry,0);dm.scale.setScalar(sc);dm.updateMatrix();c.gr.setMatrixAt(n,dm.matrix);c.gr.setColorAt(n++,GC[rnd()*3|0])}
   c.gr.count=n;c.gr.instanceMatrix.needsUpdate=true;if(c.gr.instanceColor)c.gr.instanceColor.needsUpdate=true;trySpawnLighthouse(ox,oz);trySpawnPad(ox,oz)}
 let pcx0=1e9,pcz0=1e9,dirty=true,lastPerf=null;
@@ -1356,7 +1356,7 @@ function _joining(serverName){
   }).catch(e=>{if(tok!==netTok||!inGame)return;returnHome('Could not join',netErrMsg(e,rn),'warn')});
 }
 $('play').onclick=()=>{startGame('',randSeed(),null,false)};
-$('perfbtn').onpointerdown=(e)=>{if(e){e.preventDefault();e.stopPropagation();}PERF=!PERF;try{localStorage.setItem('rlx-perf',PERF?'1':'0')}catch(_){}applyPerf();};
+$('perfbtn').onpointerdown=(e)=>{if(e){e.preventDefault();e.stopPropagation();}PERF=!PERF;try{localStorage.setItem('rlx-perf',PERF?'1':'0')}catch(_){}applyPerf();if(PERF){for(const c of pool)c.gr.count=Math.min(c.gr.count,70)}else{for(const c of pool)if(c.cx!==1e9)fill(c,c.cx,c.cz)}};
 function syncBar(){const items=$('eb').children;for(const el of items){const v=el.dataset.e;if(!isNaN(+v))el.classList.toggle('on',emote===+v)}}
 $('eb').onclick=ev=>{const e=ev.target.closest('i[data-e]');if(!e)return;const v=e.dataset.e;
   if(v==='chat')toggleChat();
