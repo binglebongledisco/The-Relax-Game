@@ -414,7 +414,7 @@ let REFLECT=true,PMAX=pm;
 function loadSet(){try{const s=JSON.parse(localStorage.getItem('rlx-settings')||'{}');for(const k in SET)if(k in s&&typeof s[k]===typeof SET[k])SET[k]=s[k]}catch(e){}}
 function saveSet(){try{localStorage.setItem('rlx-settings',JSON.stringify(SET))}catch(e){}}
 function applySettings(){
- pr=PERF?1:Math.min(devicePixelRatio||1,SET.pr);PMAX=PERF?1:Math.min(pm,SET.pr);
+ pr=PERF?0.75:Math.min(devicePixelRatio||1,SET.pr);PMAX=PERF?0.75:Math.min(pm,SET.pr);
  cam.fov=SET.fov;rs();
  rd.shadowMap.enabled=!PERF&&SET.shadows;if(rd.shadowMap.enabled)rd.shadowMap.needsUpdate=true;
  if(aG)aG.gain.value=muted?0:(MASTER*SET.master);
@@ -641,11 +641,11 @@ function fill(c,cx,cz){
   for(let t=0;t<MG;t++){const x=ox+(rnd()-.5)*CS,z=oz+(rnd()-.5)*CS,h=H(x,z),sc=.8+rnd()*.9,ry=rnd()*6.3;if(h<.45||h>18||slope(x,z,h)>.5)continue;
     dm.position.set(x,h-.03,z);dm.rotation.set(0,ry,0);dm.scale.setScalar(sc);dm.updateMatrix();c.gr.setMatrixAt(n,dm.matrix);c.gr.setColorAt(n++,GC[rnd()*3|0])}
   c.gr.count=n;c.gr.instanceMatrix.needsUpdate=true;if(c.gr.instanceColor)c.gr.instanceColor.needsUpdate=true;trySpawnLighthouse(ox,oz);trySpawnPad(ox,oz)}
-let pcx0=1e9,pcz0=1e9,dirty=true;
-function chunks(all){const pcx=Math.round(P.x/CS),pcz=Math.round(P.z/CS);if(!all&&!dirty&&pcx===pcx0&&pcz===pcz0)return;pcx0=pcx;pcz0=pcz;let built=0;
-for(let dz=-R;dz<=R;dz++)for(let dx=-R;dx<=R;dx++){const cx=pcx+dx,cz=pcz+dz;if(pool.some(c=>c.cx===cx&&c.cz===cz))continue;
-if(!all&&built)continue;let f=pool.find(c=>Math.max(Math.abs(c.cx-pcx),Math.abs(c.cz-pcz))>R);if(!f){if(pool.length>=(2*R+1)**2)continue;f=mk()}fill(f,cx,cz);built++}
-dirty=!all&&built>0;for(const c of pool){const d=Math.max(Math.abs(c.cx-pcx),Math.abs(c.cz-pcz));c.gv=d<=1;c.gr.visible=c.gv;c.tr.castShadow=d<=1}}
+let pcx0=1e9,pcz0=1e9,dirty=true,lastPerf=null;
+function chunks(all){const pcx=Math.round(P.x/CS),pcz=Math.round(P.z/CS);if(!all&&PERF===lastPerf&&!dirty&&pcx===pcx0&&pcz===pcz0)return;lastPerf=PERF;pcx0=pcx;pcz0=pcz;let built=0;const RE=PERF?2:R;
+for(let dz=-RE;dz<=RE;dz++)for(let dx=-RE;dx<=RE;dx++){const cx=pcx+dx,cz=pcz+dz;if(pool.some(c=>c.cx===cx&&c.cz===cz))continue;
+if(!all&&built)continue;let f=pool.find(c=>Math.max(Math.abs(c.cx-pcx),Math.abs(c.cz-pcz))>RE);if(!f){if(pool.length>=(2*RE+1)**2)continue;f=mk()}fill(f,cx,cz);built++}
+dirty=!all&&built>0;for(const c of pool){const d=Math.max(Math.abs(c.cx-pcx),Math.abs(c.cz-pcz));c.gv=d<=1;c.gr.visible=c.gv;c.tr.castShadow=d<=1;const vv=!PERF||d<=RE;c.m.visible=vv;c.tr.visible=vv}}
 const P=new V3();P.v=new V3();let ya=0,pt=-.1;
 function spawn(){for(let r=0;r<600;r+=6)for(let a=0;a<6.28;a+=.5){const x=Math.cos(a)*r,z=Math.sin(a)*r,h=H(x,z);if(h>2&&h<7&&slope(x,z,h)<.3){P.set(x,h,z);return}}}spawn();
 
