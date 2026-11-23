@@ -37,6 +37,8 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 #pubbtn{background:linear-gradient(135deg,#3ad9a0,#1f8fb0);color:#062c26;border:0}
 #perfbtn{background:#ffffff10;color:#cfe3e0;border:1px solid var(--b);font-weight:600;font-size:15px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #perfbtn.on{background:linear-gradient(135deg,#ffb347,#ff7a1a);color:#1d1230;border:0}
+#daynightbtn{background:#ffffff10;color:#cfe3e0;border:1px solid var(--b);font-weight:600;font-size:15px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#daynightbtn.on{background:linear-gradient(135deg,#4a5fd9,#2a3a99);color:#eef3ff;border:0}
 #setbtn{background:#ffffff12;color:#cfe3e0;border:1px solid var(--b);font-weight:600;font-size:15px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #setp{display:none;position:fixed;inset:0;z-index:9;background:#06161df5;overflow:auto;padding:max(12px,env(safe-area-inset-top)) 12px 12px;font-family:system-ui,sans-serif;color:#eef6f4;touch-action:pan-y}
 #setp .spc{display:flex;flex-direction:column;gap:12px;width:min(100%,560px);margin:0 auto;padding-top:20px;padding-bottom:40px}
@@ -57,7 +59,7 @@ button{position:fixed;border:2px solid #fff9;background:#0007;color:#fff;border-
 .asr.online{background:#0d2a1e88;border:1px solid #3ad9a055}
 .asr .as-count{color:#7a8c95;font-size:11px;font-weight:600}
 .asr.online .as-count{color:#3ad9a0}
-#play,#skb,#sdn,#mpbtn,#pubbtn,#perfbtn,#setbtn,#hostbtn,#joinbtn,#mpback{width:100%;text-align:center;padding:13px;border-radius:12px;font:800 17px system-ui;cursor:pointer;box-shadow:none;-webkit-tap-highlight-color:transparent}
+#play,#skb,#sdn,#mpbtn,#pubbtn,#perfbtn,#daynightbtn,#setbtn,#hostbtn,#joinbtn,#mpback{width:100%;text-align:center;padding:13px;border-radius:12px;font:800 17px system-ui;cursor:pointer;box-shadow:none;-webkit-tap-highlight-color:transparent}
 #sk{display:none;position:fixed;inset:0;z-index:8;background:#06161df5;overflow:auto;padding:max(12px,env(safe-area-inset-top)) 12px 12px}
 #sv{flex:0 0 150px;height:224px}#so{flex:1 1 280px;display:flex;flex-direction:column;gap:12px;font:600 13px system-ui}#sdn{flex:1 1 100%;max-width:320px}
 .rw{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.rw>span{width:62px;color:#9fc0bb}
@@ -209,7 +211,7 @@ body.ig::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:2;b
     </div>
     <div class="hr">
       <input id="un" placeholder="Your name (optional)" maxlength="16" autocomplete="off">
-      <div id="skb">Customize character</div><div id="perfbtn">⚡ Performance Mode: OFF</div><div id="setbtn">⚙️ Settings</div><div id="pubbtn">Join Public Room</div>
+      <div id="skb">Customize character</div><div id="perfbtn">⚡ Performance Mode: OFF</div><div id="daynightbtn">☀️ Time of Day: Day</div><div id="setbtn">⚙️ Settings</div><div id="pubbtn">Join Public Room</div>
       <div id="asbox">
         <div class="as-h">Active servers</div>
         <div id="aslist"><div class="asr">checking…</div></div>
@@ -318,7 +320,7 @@ body.ig::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:2;b
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
-var DIMON=0,DIMY=500,cutT=0,DIMIN=-1,PERF=false;
+var DIMON=0,DIMY=500,cutT=0,DIMIN=-1,PERF=false,NIGHT=false;
 // ============================================================
 //  SECURITY / UTILITY
 // ============================================================
@@ -424,6 +426,18 @@ function initPerf(){try{PERF=localStorage.getItem('rlx-perf')==='1'}catch(e){}lo
 function applyPerf(){
  const btn=$('perfbtn');if(btn){btn.textContent='\u26a1 Performance Mode: '+(PERF?'ON':'OFF');btn.classList.toggle('on',PERF)}
  applySettings();}
+function applyDayNight(){
+ if(!sun||!hemi||!skyM)return;
+ const b=$('daynightbtn');if(b){b.textContent=(NIGHT?'\uD83C\uDF19':'\u2600\uFE0F')+' Time of Day: '+(NIGHT?'Night':'Day');b.classList.toggle('on',NIGHT)}
+ skyM.material.uniforms.uNight.value=NIGHT?1:0;
+ sun.color.setHex(NIGHT?0x8fa8ff:0xfff0d8);sun.intensity=NIGHT?0.22:1.1;
+ hemi.color.setHex(NIGHT?0x3a4a80:0xbfd8ff);hemi.groundColor.setHex(NIGHT?0x101828:0x7a4a6a);hemi.intensity=NIGHT?0.35:0.85;
+ if(NIGHT)FOG0.setHex(0x0b1826);else FOG0.setHex(0xb9cfe6);
+ if(!DIMON)fogC.copy(FOG0);
+}
+try{NIGHT=localStorage.getItem('rlx-night')==='1'}catch(_){}
+var _dnb=$('daynightbtn');if(_dnb)_dnb.onpointerdown=function(e){if(e){e.preventDefault();e.stopPropagation()}NIGHT=!NIGHT;try{localStorage.setItem('rlx-night',NIGHT?'1':'0')}catch(_){}applyDayNight()};
+setTimeout(applyDayNight,0);
 function openSettings(){$('setp').style.display='block';renderSettings()}
 function closeSettings(){$('setp').style.display='none'}
 function renderSettings(){
@@ -456,7 +470,7 @@ scene.add(sun,sun.target);
 const skyM=new T.Mesh(new T.SphereGeometry(300,16,12),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,fog:false,precision:HIGHP,uniforms:{uT:U.uT,uSun:{value:SUN}},
 vertexShader:'varying vec3 vD;void main(){vD=position;gl_Position=(projectionMatrix*modelViewMatrix*vec4(position,1.)).xyww;}',
 fragmentShader:'varying vec3 vD;uniform vec3 uSun;uniform float uT;'+NZ+SKY2+'void main(){gl_FragColor=vec4(sky(normalize(vD),uSun,uT),1.);}'}));
-skyM.frustumCulled=false;skyM.renderOrder=1;scene.add(skyM);
+skyM.material.uniforms.uNight={value:0};skyM.material.fragmentShader=skyM.material.fragmentShader.replace('uniform vec3 uSun;uniform float uT;','uniform vec3 uSun;uniform float uT;uniform float uNight;').replace('gl_FragColor=vec4(sky(normalize(vD),uSun,uT),1.);','vec3 _sk=sky(normalize(vD),uSun,uT);_sk=mix(_sk,_sk*vec3(.18,.22,.42)+vec3(.01,.015,.04),uNight);gl_FragColor=vec4(_sk,1.);');skyM.material.needsUpdate=true;skyM.frustumCulled=false;skyM.renderOrder=1;scene.add(skyM);
 const WR=[...Array(10)].map(()=>new THREE.Vector4(0,0,-99,0));let wri=0,wkT=0,wasW=false,trauma=0;function ripple(x,z,s){WR[wri++%10].set(x,z,U.uT.value,s)}function shake(a){trauma=Math.min(1,trauma+a)}
 const RT=new T.WebGLRenderTarget(256,144,{minFilter:T.LinearFilter,magFilter:T.LinearFilter,format:T.RGBFormat}),rcam=new T.PerspectiveCamera(),rTM=new T.Matrix4(),rPl=new T.Plane(new V3(0,1,0),0),_rd=new V3(),_ru=new V3();let rtOK=false;
 function reflectPass(uw){
